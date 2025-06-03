@@ -1,0 +1,10 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/OdectyStat/bin
+/OdectyStat/obj
+/OdectyStat/Properties/PublishProfiles/FolderProfile.pubxml.user
+/OdectyStat/appSettings.json
+/OdectyStat/OdectyStat1.csproj.user
