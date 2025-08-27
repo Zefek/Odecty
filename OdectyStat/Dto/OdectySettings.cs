@@ -11,4 +11,7 @@ public class OdectySettings
     public string RabbitMQUsername { get; set; }
     public string RabbitMQPassword { get; set; }
     public string RabbitMQQueue { get; set; }
+    public string RabbitMQVHost { get; set; }
+
+    public List<QueueMapping> QueueMappings { get; set; }
 }

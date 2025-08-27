@@ -43,11 +43,17 @@ namespace OdectyStat
                 factory.HostName=options.Value.RabbitMQHost;
                 factory.UserName = options.Value.RabbitMQUsername;
                 factory.Password = options.Value.RabbitMQPassword;
+                factory.VirtualHost = options.Value.RabbitMQVHost;
 
                 connection = factory.CreateConnection();
                 model = connection.CreateModel();
 
+                model.ExchangeDeclare(options.Value.RabbitMQQueue, ExchangeType.Direct, true, false, null);
                 model.QueueDeclare(options.Value.RabbitMQQueue, true, false, false, null);
+                foreach(var map in options.Value.QueueMappings)
+                {
+                    model.QueueBind(map.QueueName, map.ExchangeName, map.RoutingKey);
+                }
                 consumer = new EventingBasicConsumer(model);
                 consumer.Received+=Consumer_Received;
                 model.BasicConsume(options.Value.RabbitMQQueue, false, consumer);
