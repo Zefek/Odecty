@@ -21,7 +21,7 @@ namespace OdectyMVC.Application
             var gauge = await context.GaugeRepository.GetGauge(newValue.GaugeId);
             gauge.SetNewValue(newValue.Value, newValue.Datetime);
             await context.SaveChangesAsync();
-
+            await context.MessageQueue.Publish(new { gaugeId = newValue.GaugeId, value = gauge.LastValue }, "odecty.gauge.lastvaluechanged");
             var service = new ComputeService3(context);
             var result = await service.Compute(newValue.GaugeId);
             context.AddRange(result);

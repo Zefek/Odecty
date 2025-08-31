@@ -19,7 +19,8 @@ namespace OdectyMVC.DataLayer
             IMeasurementStatisticsRepository measurementStatisticsRepository,
             IMeasurementRepository measurementRepository,
             IHomeAssistantStatisticsRepository homeAssistantStatisticsRepository,
-            HomeAssistantDbContext homeAssistantDbContext)
+            HomeAssistantDbContext homeAssistantDbContext,
+            IMessageQueue messageQueue)
         {
             GaugeRepository=gaugeRepository;
             this.context=context;
@@ -29,6 +30,7 @@ namespace OdectyMVC.DataLayer
             MeasurementRepository=measurementRepository;
             HomeAssistantStatisticsRepository=homeAssistantStatisticsRepository;
             this.homeAssistantDbContext=homeAssistantDbContext;
+            MessageQueue = messageQueue;
         }
 
         public IGaugeRepository GaugeRepository { get; }
@@ -40,6 +42,7 @@ namespace OdectyMVC.DataLayer
         public IMeasurementRepository MeasurementRepository { get; }
 
         public IHomeAssistantStatisticsRepository HomeAssistantStatisticsRepository { get; }
+        public IMessageQueue MessageQueue { get; }
 
         public void AddHomeAssistant<TEntity>(TEntity entity)
         {
