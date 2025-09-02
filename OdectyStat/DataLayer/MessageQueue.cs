@@ -17,6 +17,7 @@ public class MessageQueue : IMessageQueue
     public MessageQueue(RabbitMQProvider rabbitMQProvider, IOptions<OdectySettings> options)
     {
         model = rabbitMQProvider.CreateModel();
+        this.options = options;
     }
     public Task Publish(object message, string routingKey)
     {
