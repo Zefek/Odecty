@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using OdectyMVC.Application;
 using OdectyMVC.Contracts;
 using OdectyStat.Dto;
+using OdectyStat1.DataLayer;
 using OdectyStat1.Dto;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -19,7 +20,6 @@ namespace OdectyStat
 {
     internal class MQClient : BackgroundService
     {
-        private IConnection connection;
         private IModel model;
         private EventingBasicConsumer consumer;
         private readonly IServiceProvider serviceProvider;
@@ -27,11 +27,12 @@ namespace OdectyStat
         private readonly ILogger<MQClient> logger;
         private bool inProcess = false;
 
-        public MQClient(IServiceProvider serviceProvider, IOptions<OdectySettings> options, ILogger<MQClient> logger) 
+        public MQClient(IServiceProvider serviceProvider, IOptions<OdectySettings> options, RabbitMQProvider rabbitMQProvider, ILogger<MQClient> logger) 
         {
             this.serviceProvider=serviceProvider;
             this.options=options;
             this.logger=logger;
+            model = rabbitMQProvider.CreateModel();
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -39,24 +40,12 @@ namespace OdectyStat
             logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
             try
             {
-                var factory = new ConnectionFactory();
-                factory.HostName=options.Value.RabbitMQHost;
-                factory.UserName = options.Value.RabbitMQUsername;
-                factory.Password = options.Value.RabbitMQPassword;
-                factory.VirtualHost = options.Value.RabbitMQVHost;
-
-                connection = factory.CreateConnection();
-                model = connection.CreateModel();
-
-                model.ExchangeDeclare(options.Value.RabbitMQQueue, ExchangeType.Direct, true, false, null);
-                model.QueueDeclare(options.Value.RabbitMQQueue, true, false, false, null);
-                foreach(var map in options.Value.QueueMappings)
-                {
-                    model.QueueBind(map.QueueName, map.ExchangeName, map.RoutingKey);
-                }
                 consumer = new EventingBasicConsumer(model);
                 consumer.Received+=Consumer_Received;
-                model.BasicConsume(options.Value.RabbitMQQueue, false, consumer);
+                foreach(var queue in options.Value.QueueMappings.Select(q => q.QueueName).Distinct())
+                {
+                    model.BasicConsume(queue, false, consumer);
+                }
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     // Keep the service running
@@ -104,7 +93,6 @@ namespace OdectyStat
         public override void Dispose()
         {
             model?.Dispose();
-            connection?.Dispose();
             base.Dispose();
         }
 
@@ -112,7 +100,6 @@ namespace OdectyStat
         {
             logger.LogInformation("Worker stopping at: {time}", DateTimeOffset.Now);
             model?.Dispose();
-            connection?.Dispose();
             return base.StopAsync(cancellationToken);
         }
     }

@@ -3,6 +3,7 @@ using OdectyStat;
 using OdectyStat.Business;
 using OdectyStat.Dto;
 using OdectyStat1.Business;
+using OdectyStat1.Dto;
 
 namespace OdectyMVC.Application
 {
@@ -21,7 +22,7 @@ namespace OdectyMVC.Application
             var gauge = await context.GaugeRepository.GetGauge(newValue.GaugeId);
             gauge.SetNewValue(newValue.Value, newValue.Datetime);
             await context.SaveChangesAsync();
-
+            await context.MessageQueue.Publish(new { gaugeId = newValue.GaugeId, value = gauge.LastValue }, MessageQueueRoutingKeys.Odecty_Gauge_Lastvaluechanged);
             var service = new ComputeService3(context);
             var result = await service.Compute(newValue.GaugeId);
             context.AddRange(result);

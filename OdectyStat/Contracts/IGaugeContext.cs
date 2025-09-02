@@ -13,6 +13,8 @@ namespace OdectyMVC.Contracts
         IMeasurementRepository MeasurementRepository { get; }
         IHomeAssistantStatisticsRepository HomeAssistantStatisticsRepository { get; }
 
+        IMessageQueue MessageQueue { get; }
+
         void AddHomeAssistant<TEntity>(TEntity entity);
         void AddRange<TEntity>(ICollection<TEntity> entities);
         Task SaveChangesAsync();

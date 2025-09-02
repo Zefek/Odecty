@@ -25,11 +25,12 @@ await Host.CreateDefaultBuilder()
     .ConfigureServices((hostContext, services) =>
      {
          services.Configure<OdectySettings>(hostContext.Configuration.GetSection("OdectySettings"));
+         services.AddSingleton<RabbitMQProvider>();
          services.AddScoped<IGaugeContext, GaugeContext>();
          services.AddScoped<IGaugeRepository, GaugeRepository>();
          services.AddScoped<IMeasurementDayRepository, MeasurementDayRepository>();
          services.AddScoped<IGaugeService, GaugeService>();
-         //services.AddScoped<IExcelProvider, ExcelProvider>();
+         services.AddScoped<IMessageQueue, MessageQueue>();
          services.AddScoped<IMeasurementRepository, MeasurementRepository>();
          services.AddScoped<IMeasurementStatisticsRepository, MeasurementStatisticsRepository>();
          services.AddScoped<IHomeAssistantStatisticsRepository, HomeAssistantStatisticsRepository>();
