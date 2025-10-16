@@ -27,4 +27,13 @@ public class MessageQueue : IMessageQueue
                              body: Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(message)));
         return Task.CompletedTask;
     }
+
+    public Task MQTTPublish(string message, string routingKey)
+    {
+        model.BasicPublish(exchange: "amq.topic",
+                             routingKey: routingKey,
+                             basicProperties: null,
+                             body: Encoding.UTF8.GetBytes(message));
+        return Task.CompletedTask;
+    }
 }

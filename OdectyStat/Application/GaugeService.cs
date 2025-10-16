@@ -1,6 +1,4 @@
 ﻿using OdectyMVC.Contracts;
-using OdectyStat;
-using OdectyStat.Business;
 using OdectyStat.Dto;
 using OdectyStat1.Business;
 using OdectyStat1.Dto;
@@ -13,7 +11,7 @@ namespace OdectyMVC.Application
 
         public GaugeService(IGaugeContext context)
         {
-            this.context=context;
+            this.context = context;
         }
 
         public async Task AddNewValue(NewValue newValue)
@@ -53,22 +51,22 @@ namespace OdectyMVC.Application
                         homeStatistics.Add(lastDayRecord);
                         context.AddHomeAssistant(lastDayRecord);
                     }
-                    if(lastDayShort != null)
+                    if (lastDayShort != null)
                     {
                         lastDayShort.State = Math.Round((double)r.Value, 4);
                     }
                 }
                 double sum = 0;
-                foreach (var s in homeStatistics.OrderBy(k=>k.StartTs))
+                foreach (var s in homeStatistics.OrderBy(k => k.StartTs))
                 {
-                    sum+=s.State ?? 0;
+                    sum += s.State ?? 0;
                     s.Sum = Math.Round(sum, 4);
                 }
-                
+
                 foreach (var s in shortTerm.OrderByDescending(k => k.StartTs))
                 {
                     s.Sum = Math.Round(sum, 4);
-                    sum-=s.State ?? 0;
+                    sum -= s.State ?? 0;
                 }
             }
             await context.SaveChangesAsync();
