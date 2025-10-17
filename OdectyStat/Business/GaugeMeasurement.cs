@@ -1,8 +1,7 @@
-﻿using OdectyStat.Business;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace OdectyMVC.Business
+namespace OdectyStat1.Business
 {
     [Table("GaugeMeasurement")]
     public class GaugeMeasurement

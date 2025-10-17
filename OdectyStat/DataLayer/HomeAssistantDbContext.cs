@@ -1,16 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OdectyStat1.Business;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace OdectyStat1.DataLayer
 {
     public class HomeAssistantDbContext : DbContext
     {
-        public HomeAssistantDbContext(DbContextOptions<HomeAssistantDbContext> options) : base(options) 
+        public HomeAssistantDbContext(DbContextOptions<HomeAssistantDbContext> options) : base(options)
         {
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
             AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
@@ -18,7 +13,7 @@ namespace OdectyStat1.DataLayer
 
         public DbSet<Statistic> Statistics { get; set; }
 
-        public DbSet<StatisticsShortTerm> StatisticsShortTerms  { get; set; }
+        public DbSet<StatisticsShortTerm> StatisticsShortTerms { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

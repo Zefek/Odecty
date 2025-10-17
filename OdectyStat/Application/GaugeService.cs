@@ -1,9 +1,8 @@
-﻿using OdectyMVC.Contracts;
-using OdectyStat.Dto;
-using OdectyStat1.Business;
+﻿using OdectyStat1.Business;
+using OdectyStat1.Contracts;
 using OdectyStat1.Dto;
 
-namespace OdectyMVC.Application
+namespace OdectyStat1.Application
 {
     public class GaugeService : IGaugeService
     {

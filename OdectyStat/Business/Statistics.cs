@@ -1,12 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Diagnostics;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace OdectyStat1.Business
+﻿namespace OdectyStat1.Business
 {
     public partial class Statistic
     {

@@ -2,11 +2,7 @@
 using OdectyMVC.Contracts;
 using OdectyStat1.Dto;
 using RabbitMQ.Client;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace OdectyStat1.DataLayer;
 public class MessageQueue : IMessageQueue

@@ -1,22 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OdectyMVC.Application;
-using OdectyMVC.Contracts;
-using OdectyStat.Dto;
+using OdectyStat1.Application;
 using OdectyStat1.DataLayer;
 using OdectyStat1.Dto;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace OdectyStat
+namespace OdectyStat1
 {
     internal class MQClient : BackgroundService
     {

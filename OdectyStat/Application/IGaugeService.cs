@@ -1,6 +1,6 @@
-﻿using OdectyStat.Dto;
+﻿using OdectyStat1.Dto;
 
-namespace OdectyMVC.Application
+namespace OdectyStat1.Application
 {
     public interface IGaugeService
     {

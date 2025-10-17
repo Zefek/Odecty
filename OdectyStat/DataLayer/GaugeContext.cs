@@ -1,11 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
-using OdectyMVC.Business;
-using OdectyMVC.Contracts;
-using OdectyStat.Contracts;
-using OdectyStat1.Contracts;
-using OdectyStat1.DataLayer;
+﻿using OdectyStat1.Contracts;
 
-namespace OdectyMVC.DataLayer
+namespace OdectyStat1.DataLayer
 {
     public class GaugeContext : IGaugeContext
     {
@@ -22,14 +17,14 @@ namespace OdectyMVC.DataLayer
             HomeAssistantDbContext homeAssistantDbContext,
             IMessageQueue messageQueue)
         {
-            GaugeRepository=gaugeRepository;
-            this.context=context;
-            MeasurementDayRepository=measurementDayRepository;
+            GaugeRepository = gaugeRepository;
+            this.context = context;
+            MeasurementDayRepository = measurementDayRepository;
             //ExcelProvider=excelProvider;
-            MeasurementStatisticsRepository=measurementStatisticsRepository;
-            MeasurementRepository=measurementRepository;
-            HomeAssistantStatisticsRepository=homeAssistantStatisticsRepository;
-            this.homeAssistantDbContext=homeAssistantDbContext;
+            MeasurementStatisticsRepository = measurementStatisticsRepository;
+            MeasurementRepository = measurementRepository;
+            HomeAssistantStatisticsRepository = homeAssistantStatisticsRepository;
+            this.homeAssistantDbContext = homeAssistantDbContext;
             MessageQueue = messageQueue;
         }
 
@@ -50,7 +45,7 @@ namespace OdectyMVC.DataLayer
         }
 
         public void AddRange<TEntity>(ICollection<TEntity> entities)
-        { 
+        {
             foreach (TEntity entity in entities)
             {
                 context.Add(entity);

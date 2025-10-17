@@ -1,14 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using OdectyMVC.DataLayer;
-using OdectyStat.Contracts;
-using OdectyStat.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using OdectyStat1.Contracts;
+using OdectyStat1.Entities;
 
-namespace OdectyStat.DataLayer
+namespace OdectyStat1.DataLayer
 {
     public class MeasurementDayRepository : IMeasurementDayRepository
     {
@@ -16,7 +10,7 @@ namespace OdectyStat.DataLayer
 
         public MeasurementDayRepository(GaugeDbContext context)
         {
-            this.context=context;
+            this.context = context;
         }
 
         public async Task<List<GaugeMeasuerementStatistics>> GetDay(int gaugeId)
@@ -25,7 +19,7 @@ namespace OdectyStat.DataLayer
             var days = measurements.GroupBy(k => k.MeasurementDateTime.Date);
             var minday = days.Min(k => k.Key);
             var maxday = days.Max(k => k.Key);
-            var stats = await context.GaugeMeasuerementStatistics.AsNoTracking().Where(k => k.GaugeId == gaugeId && k.MeasurementDateTime.Date>= minday && k.MeasurementDateTime.Date<=maxday).ToListAsync();
+            var stats = await context.GaugeMeasuerementStatistics.AsNoTracking().Where(k => k.GaugeId == gaugeId && k.MeasurementDateTime.Date >= minday && k.MeasurementDateTime.Date <= maxday).ToListAsync();
 
             foreach (var day in days)
             {
@@ -49,11 +43,11 @@ namespace OdectyStat.DataLayer
 
         public async Task SetStatistics(List<GaugeMeasuerementStatistics> stats)
         {
-            stats.ForEach(k => k.Id=0);
-            var minDate = stats.Min(k=>k.MeasurementDateTime);
+            stats.ForEach(k => k.Id = 0);
+            var minDate = stats.Min(k => k.MeasurementDateTime);
             var maxDate = stats.Max(k => k.MeasurementDateTime.AddSeconds(1));
             var gaugeId = stats.First().GaugeId;
-            var toDelete = await context.GaugeMeasuerementStatistics.Where(k => k.GaugeId == gaugeId && k.MeasurementDateTime>=minDate && k.MeasurementDateTime<=maxDate).ToListAsync();
+            var toDelete = await context.GaugeMeasuerementStatistics.Where(k => k.GaugeId == gaugeId && k.MeasurementDateTime >= minDate && k.MeasurementDateTime <= maxDate).ToListAsync();
             context.RemoveRange(toDelete);
             await context.AddRangeAsync(stats);
         }

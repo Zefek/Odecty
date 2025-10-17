@@ -1,6 +1,6 @@
 ﻿using OdectyMVC.Business;
 
-namespace OdectyMVC.Contracts
+namespace OdectyStat1.Contracts
 {
     public interface IGaugeRepository
     {

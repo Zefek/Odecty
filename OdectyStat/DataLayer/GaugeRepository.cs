@@ -1,8 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
-using OdectyMVC.Business;
-using OdectyMVC.Contracts;
+﻿using OdectyStat1.Business;
+using OdectyStat1.Contracts;
 
-namespace OdectyMVC.DataLayer
+namespace OdectyStat1.DataLayer
 {
     internal class GaugeRepository : IGaugeRepository
     {
@@ -10,7 +9,7 @@ namespace OdectyMVC.DataLayer
 
         public GaugeRepository(GaugeDbContext gaugeContext)
         {
-            this.gaugeContext=gaugeContext;
+            this.gaugeContext = gaugeContext;
         }
 
         public async Task<Gauge> GetGauge(int id)
