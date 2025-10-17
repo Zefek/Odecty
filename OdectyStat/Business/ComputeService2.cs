@@ -1,5 +1,5 @@
-﻿using OdectyMVC.Contracts;
-using OdectyStat.Entities;
+﻿using OdectyStat1.Contracts;
+using OdectyStat1.Entities;
 
 namespace OdectyStat1.Business
 {

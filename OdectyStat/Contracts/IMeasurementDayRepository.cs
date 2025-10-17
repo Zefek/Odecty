@@ -1,4 +1,4 @@
-﻿using OdectyStat.Entities;
+﻿using OdectyStat1.Entities;
 
 namespace OdectyStat1.Contracts
 {

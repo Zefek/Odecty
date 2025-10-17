@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
-using OdectyMVC.Contracts;
+using OdectyStat1.Contracts;
 using OdectyStat1.Dto;
 using RabbitMQ.Client;
 using System.Text;

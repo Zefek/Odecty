@@ -1,4 +1,4 @@
-﻿using OdectyMVC.Business;
+﻿using OdectyStat1.Business;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
