@@ -4,10 +4,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using OdectyStat1;
 using OdectyStat1.Application;
 using OdectyStat1.Contracts;
 using OdectyStat1.DataLayer;
+using OdectyStat1.DataLayer.Consumers;
 using OdectyStat1.Dto;
 
 
@@ -21,6 +21,7 @@ await Host.CreateDefaultBuilder()
     .ConfigureServices((hostContext, services) =>
      {
          services.Configure<OdectySettings>(hostContext.Configuration.GetSection("OdectySettings"));
+         services.Configure<GaugeImageLocation>(hostContext.Configuration.GetSection("GaugeImageLocation"));
          services.AddSingleton<RabbitMQProvider>();
          services.AddScoped<IGaugeContext, GaugeContext>();
          services.AddScoped<IGaugeRepository, GaugeRepository>();
@@ -38,7 +39,9 @@ await Host.CreateDefaultBuilder()
          {
              opt.UseNpgsql(hostContext.Configuration.GetConnectionString("HomeAssistant"));
          })
-         .AddHostedService<MQClient>();
+         .AddHostedService<MQClient>()
+         .AddHostedService<RecognizedSuccess>()
+         .AddHostedService<RecognizedFailed>();
      })
     .ConfigureLogging(logging =>
     {

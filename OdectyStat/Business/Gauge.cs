@@ -18,7 +18,7 @@ namespace OdectyStat1.Business
         public ICollection<GaugeMeasuerementStatistics> MeasurementsStatistics { get; set; } = new List<GaugeMeasuerementStatistics>();
         public int? HomeassistantId { get; internal set; }
 
-        public void SetNewValue(decimal newValue, DateTime datetime)
+        public void SetNewValue(decimal newValue, DateTime datetime, string? imagePath = null)
         {
             var increment = newValue - LastValue;
             if (increment > 0)
@@ -27,7 +27,8 @@ namespace OdectyStat1.Business
                 {
                     Value = increment,
                     MeasurementDateTime = datetime,
-                    CurrentValue = newValue
+                    CurrentValue = newValue,
+                    ImagePath = imagePath
                 });
                 LastValue = newValue;
             }

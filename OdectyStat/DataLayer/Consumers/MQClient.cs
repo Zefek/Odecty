@@ -9,7 +9,7 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;
 
-namespace OdectyStat1
+namespace OdectyStat1.DataLayer.Consumers
 {
     internal class MQClient : BackgroundService
     {
