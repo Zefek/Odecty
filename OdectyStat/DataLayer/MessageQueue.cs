@@ -5,7 +5,7 @@ using RabbitMQ.Client;
 using System.Text;
 
 namespace OdectyStat1.DataLayer;
-public class MessageQueue : IMessageQueue
+public class MessageQueue : IMessageQueue, IDisposable
 {
     private readonly IModel model;
     private readonly IOptions<OdectySettings> options;
@@ -31,5 +31,10 @@ public class MessageQueue : IMessageQueue
                              basicProperties: null,
                              body: Encoding.UTF8.GetBytes(message));
         return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        model?.Dispose();
     }
 }
