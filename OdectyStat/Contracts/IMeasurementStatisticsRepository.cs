@@ -1,6 +1,6 @@
-﻿using OdectyStat.Entities;
+﻿using OdectyStat1.Entities;
 
-namespace OdectyMVC.Contracts
+namespace OdectyStat1.Contracts
 {
     public interface IMeasurementStatisticsRepository
     {

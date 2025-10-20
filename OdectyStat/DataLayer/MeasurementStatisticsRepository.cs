@@ -1,12 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using OdectyMVC.Contracts;
-using OdectyMVC.DataLayer;
-using OdectyStat.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using OdectyStat1.Contracts;
+using OdectyStat1.Entities;
 
 namespace OdectyStat1.DataLayer
 {
@@ -16,11 +10,11 @@ namespace OdectyStat1.DataLayer
 
         public MeasurementStatisticsRepository(GaugeDbContext context)
         {
-            this.context=context;
+            this.context = context;
         }
         public async Task<GaugeMeasuerementStatistics> GetLast(int gaugeId)
         {
-            return await context.GaugeMeasuerementStatistics.Where(k=>k.GaugeId == gaugeId).OrderByDescending(k=>k.MeasurementDateTime).FirstOrDefaultAsync();
+            return await context.GaugeMeasuerementStatistics.Where(k => k.GaugeId == gaugeId).OrderByDescending(k => k.MeasurementDateTime).FirstOrDefaultAsync();
         }
     }
 }

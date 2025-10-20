@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using OdectyStat1.Business;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using OdectyMVC.Business;
+using System.ComponentModel.DataAnnotations.Schema;
 
-namespace OdectyStat.Entities
+namespace OdectyStat1.Entities
 {
     [Table("GaugeMeasuerementStatistics")]
     public class GaugeMeasuerementStatistics
@@ -46,7 +41,7 @@ namespace OdectyStat.Entities
                 var nextDayFirstMeasurementDate = nextDayFirstMeasurement.MeasurementDateTime.Date;
                 var minutesFromDayBegin = (decimal)(nextDayFirstMeasurement.MeasurementDateTime - nextDayFirstMeasurementDate).TotalMinutes;
 
-                nextDay.InitialConsumption = diff.Consumption * minutesFromDayBegin/(decimal)diff.TotalDateTime.TotalMinutes;
+                nextDay.InitialConsumption = diff.Consumption * minutesFromDayBegin / (decimal)diff.TotalDateTime.TotalMinutes;
                 nextDay.InitialValue = nextDayFirstMeasurement.CurrentValue - nextDay.InitialConsumption;
                 Value = InitialConsumption + lastMasuremens.CurrentValue - Measurements.Min(k => k.CurrentValue) + consumptionToEndDay;
                 CurrentValue = lastMasuremens.CurrentValue + consumptionToEndDay;

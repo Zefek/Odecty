@@ -1,8 +1,4 @@
-﻿using OdectyStat.Contracts;
-using OdectyStat1.Business;
-using OdectyStat1.Contracts;
-
-namespace OdectyMVC.Contracts
+﻿namespace OdectyStat1.Contracts
 {
     public interface IGaugeContext
     {

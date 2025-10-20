@@ -1,22 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OdectyMVC.Application;
-using OdectyMVC.Contracts;
-using OdectyStat.Dto;
+using OdectyStat1.Application;
 using OdectyStat1.DataLayer;
 using OdectyStat1.Dto;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace OdectyStat
+namespace OdectyStat1.DataLayer.Consumers
 {
     internal class MQClient : BackgroundService
     {
@@ -27,11 +20,11 @@ namespace OdectyStat
         private readonly ILogger<MQClient> logger;
         private bool inProcess = false;
 
-        public MQClient(IServiceProvider serviceProvider, IOptions<OdectySettings> options, RabbitMQProvider rabbitMQProvider, ILogger<MQClient> logger) 
+        public MQClient(IServiceProvider serviceProvider, IOptions<OdectySettings> options, RabbitMQProvider rabbitMQProvider, ILogger<MQClient> logger)
         {
-            this.serviceProvider=serviceProvider;
-            this.options=options;
-            this.logger=logger;
+            this.serviceProvider = serviceProvider;
+            this.options = options;
+            this.logger = logger;
             model = rabbitMQProvider.CreateModel();
         }
 
@@ -41,18 +34,15 @@ namespace OdectyStat
             try
             {
                 consumer = new EventingBasicConsumer(model);
-                consumer.Received+=Consumer_Received;
-                foreach(var queue in options.Value.QueueMappings.Select(q => q.QueueName).Distinct())
-                {
-                    model.BasicConsume(queue, false, consumer);
-                }
+                consumer.Received += Consumer_Received;
+                model.BasicConsume(QueuesToConsume.Odecty, false, consumer);
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     // Keep the service running
                     await Task.Delay(1000, stoppingToken);
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 logger.LogError(e, "Error create mq client: {message}", e.Message);
             }
@@ -74,13 +64,13 @@ namespace OdectyStat
                     await service.AddNewValue(newValue);
                     model.BasicAck(e.DeliveryTag, false);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     logger.LogError(ex, "Error processing data: {message}", ex.Message);
                 }
                 finally
-                { 
-                    inProcess = false; 
+                {
+                    inProcess = false;
                 }
             }
             else

@@ -1,8 +1,7 @@
-﻿using OdectyStat.Business;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace OdectyMVC.Business
+namespace OdectyStat1.Business
 {
     [Table("GaugeMeasurement")]
     public class GaugeMeasurement
@@ -17,6 +16,7 @@ namespace OdectyMVC.Business
         public decimal Value { get; set; }
 
         public decimal CurrentValue { get; set; }
+        public string? ImagePath { get; set; }
 
         public static MeasurementDiff operator -(GaugeMeasurement first, GaugeMeasurement second)
         {

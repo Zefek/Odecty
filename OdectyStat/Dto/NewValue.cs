@@ -1,11 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace OdectyStat.Dto
+﻿namespace OdectyStat1.Dto
 {
     public class NewValue
     {

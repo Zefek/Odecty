@@ -1,7 +1,6 @@
-﻿using OdectyMVC.Business;
-using OdectyStat1.Business;
+﻿using OdectyStat1.Business;
 
-namespace OdectyMVC.Contracts
+namespace OdectyStat1.Contracts
 {
     public interface IHomeAssistantStatisticsRepository
     {

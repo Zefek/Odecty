@@ -1,13 +1,7 @@
-﻿using OdectyMVC.Business;
-using OdectyMVC.Contracts;
-using OdectyStat.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using OdectyStat1.Contracts;
+using OdectyStat1.Entities;
 
-namespace OdectyStat.Business
+namespace OdectyStat1.Business
 {
     public class ComputeService2
     {
@@ -15,30 +9,30 @@ namespace OdectyStat.Business
 
         public ComputeService2(IGaugeContext context)
         {
-            this.context=context;
+            this.context = context;
         }
         public async Task Compute(int gaugeId)
         {
-            Console.WriteLine("Výpočet ("+gaugeId.ToString()+")");
+            Console.WriteLine("Výpočet (" + gaugeId.ToString() + ")");
             var days = (await context.MeasurementDayRepository.GetDay(gaugeId)).OrderBy(k => k.MeasurementDateTime).ToList();
             for (int i = 0; i < days.Count; i++)
             {
                 GaugeMeasuerementStatistics nextDay = null;
-                if (i < days.Count-1)
-                    nextDay = days.ElementAt(i+1);
+                if (i < days.Count - 1)
+                    nextDay = days.ElementAt(i + 1);
                 days.ElementAt(i).ComputeToEndDay(nextDay);
             }
 
-            for (var i = days.Min(k => k.MeasurementDateTime.Date); i<=days.Max(k=>k.MeasurementDateTime.Date) ;)
+            for (var i = days.Min(k => k.MeasurementDateTime.Date); i <= days.Max(k => k.MeasurementDateTime.Date);)
             {
-                if(days.FirstOrDefault(k=>k.MeasurementDateTime.Date == i.Date) == null)
+                if (days.FirstOrDefault(k => k.MeasurementDateTime.Date == i.Date) == null)
                 {
                     var predecessor = days.First(k => k.MeasurementDateTime.Date == i.AddDays(-1).Date);
                     var successor = FindNext(days, i.AddDays(1));
-                    var totalDays = (decimal)Math.Ceiling((successor.MeasurementDateTime-predecessor.MeasurementDateTime).TotalDays);
-                    var consumption = (successor.InitialValue - predecessor.CurrentValue)/(totalDays-1);
+                    var totalDays = (decimal)Math.Ceiling((successor.MeasurementDateTime - predecessor.MeasurementDateTime).TotalDays);
+                    var consumption = (successor.InitialValue - predecessor.CurrentValue) / (totalDays - 1);
                     var value = predecessor.CurrentValue;
-                    for (int j = 0; j< totalDays-1; j++)
+                    for (int j = 0; j < totalDays - 1; j++)
                     {
                         var newDay = i.AddDays(j);
                         days.Add(new GaugeMeasuerementStatistics
@@ -61,7 +55,7 @@ namespace OdectyStat.Business
 
         private GaugeMeasuerementStatistics FindNext(List<GaugeMeasuerementStatistics> measurements, DateTimeOffset from)
         {
-            return measurements.FirstOrDefault(k => k.MeasurementDateTime.Date>=from.Date);
+            return measurements.FirstOrDefault(k => k.MeasurementDateTime.Date >= from.Date);
         }
     }
 }

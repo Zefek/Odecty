@@ -1,12 +1,8 @@
 ﻿using Microsoft.Extensions.Options;
-using OdectyMVC.Contracts;
+using OdectyStat1.Contracts;
 using OdectyStat1.Dto;
 using RabbitMQ.Client;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace OdectyStat1.DataLayer;
 public class MessageQueue : IMessageQueue
@@ -25,6 +21,15 @@ public class MessageQueue : IMessageQueue
                              routingKey: routingKey,
                              basicProperties: null,
                              body: Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(message)));
+        return Task.CompletedTask;
+    }
+
+    public Task MQTTPublish(string message, string routingKey)
+    {
+        model.BasicPublish(exchange: "amq.topic",
+                             routingKey: routingKey,
+                             basicProperties: null,
+                             body: Encoding.UTF8.GetBytes(message));
         return Task.CompletedTask;
     }
 }

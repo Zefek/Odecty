@@ -1,19 +1,22 @@
-﻿using OdectyMVC.Contracts;
-using OdectyStat;
-using OdectyStat.Business;
-using OdectyStat.Dto;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OdectyStat1.Business;
+using OdectyStat1.Contracts;
 using OdectyStat1.Dto;
 
-namespace OdectyMVC.Application
+namespace OdectyStat1.Application
 {
     public class GaugeService : IGaugeService
     {
         private readonly IGaugeContext context;
+        private readonly IOptions<GaugeImageLocation> options;
+        private readonly ILogger<GaugeService> logger;
 
-        public GaugeService(IGaugeContext context)
+        public GaugeService(IGaugeContext context, IOptions<GaugeImageLocation> options, ILogger<GaugeService> logger)
         {
-            this.context=context;
+            this.context = context;
+            this.options = options;
+            this.logger = logger;
         }
 
         public async Task AddNewValue(NewValue newValue)
@@ -53,22 +56,22 @@ namespace OdectyMVC.Application
                         homeStatistics.Add(lastDayRecord);
                         context.AddHomeAssistant(lastDayRecord);
                     }
-                    if(lastDayShort != null)
+                    if (lastDayShort != null)
                     {
                         lastDayShort.State = Math.Round((double)r.Value, 4);
                     }
                 }
                 double sum = 0;
-                foreach (var s in homeStatistics.OrderBy(k=>k.StartTs))
+                foreach (var s in homeStatistics.OrderBy(k => k.StartTs))
                 {
-                    sum+=s.State ?? 0;
+                    sum += s.State ?? 0;
                     s.Sum = Math.Round(sum, 4);
                 }
-                
+
                 foreach (var s in shortTerm.OrderByDescending(k => k.StartTs))
                 {
                     s.Sum = Math.Round(sum, 4);
-                    sum-=s.State ?? 0;
+                    sum -= s.State ?? 0;
                 }
             }
             await context.SaveChangesAsync();
@@ -81,6 +84,44 @@ namespace OdectyMVC.Application
             var gauge = await context.GaugeRepository.GetGauge(gaugeId);
             gauge.AddIncrement(increment, datetime);
             await context.SaveChangesAsync();
+        }
+
+        public void GaugeRecognizedFailed(int gaugeId, string imagePath)
+        {
+            logger.LogInformation("Recognition failed for gauge {gaugeId} with image {imagePath}", gaugeId, imagePath);
+            MoveFile(gaugeId, imagePath, false);
+        }
+
+        public async Task GaugeRecognizedSucceeded(int gaugeId, string imagePath, decimal value)
+        {
+            logger.LogInformation("Recognition succeeded for gauge {gaugeId} with image {imagePath} and value {value}", gaugeId, imagePath, value);
+            var gauge = await context.GaugeRepository.GetGauge(gaugeId);
+            if (gauge.LastValue > value)
+            {
+                logger.LogWarning("Recognized value {value} is less than last value {lastValue} for gauge {gaugeId}. Marking as failed.", value, gauge.LastValue, gaugeId);
+                MoveFile(gaugeId, imagePath, false);
+            }
+            else
+            {
+                logger.LogInformation("Updating gauge {gaugeId} with new value {value}", gaugeId, value);
+                gauge.SetNewValue(value, DateTime.Now, imagePath);
+                await context.SaveChangesAsync();
+                await context.MessageQueue.MQTTPublish(value.ToString().Replace(",", "."), MessageQueueRoutingKeys.WatermeterState);
+                await context.MessageQueue.Publish(new { gaugeId, value = gauge.LastValue }, MessageQueueRoutingKeys.Odecty_Gauge_Lastvaluechanged);
+                MoveFile(gaugeId, imagePath, true);
+            }
+        }
+
+        private void MoveFile(int gaugeId, string imagePath, bool success)
+        {
+            var targetFolder = success ? options.Value.RecognizedSuccessFolder : options.Value.RecognizedFailedFolder;
+            targetFolder = string.Format(targetFolder, gaugeId);
+            logger.LogInformation("Moving file {imagePath} to folder {targetFolder}", imagePath, targetFolder);
+            if (!Directory.Exists(targetFolder))
+            {
+                Directory.CreateDirectory(targetFolder);
+            }
+            File.Move(Path.Combine(string.Format(options.Value.Path, gaugeId), imagePath), Path.Combine(targetFolder, imagePath));
         }
     }
 }
