@@ -1,4 +1,5 @@
-﻿using OdectyStat1.Business;
+﻿using Microsoft.EntityFrameworkCore;
+using OdectyStat1.Business;
 using OdectyStat1.Contracts;
 
 namespace OdectyStat1.DataLayer
@@ -14,7 +15,9 @@ namespace OdectyStat1.DataLayer
 
         public async Task<Gauge> GetGauge(int id)
         {
-            return await gaugeContext.Gauge.FindAsync(id);
+            var gauge = await gaugeContext.Gauge.FindAsync(id);
+            gauge.LastMeasurement = await gaugeContext.GaugeMeasurement.Where(k => k.GaugeId == id).OrderByDescending(k => k.MeasurementDateTime).FirstOrDefaultAsync();
+            return gauge;
         }
     }
 }

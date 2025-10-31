@@ -89,39 +89,65 @@ namespace OdectyStat1.Application
         public void GaugeRecognizedFailed(int gaugeId, string imagePath)
         {
             logger.LogInformation("Recognition failed for gauge {gaugeId} with image {imagePath}", gaugeId, imagePath);
-            MoveFile(gaugeId, imagePath, false);
+            MoveFile(gaugeId, imagePath, imagePath, false);
         }
 
-        public async Task GaugeRecognizedSucceeded(int gaugeId, string imagePath, decimal value)
+        public async Task GaugeRecognizedSucceeded(int gaugeId, string imagePath, decimal value, DateTime dateTime)
         {
             logger.LogInformation("Recognition succeeded for gauge {gaugeId} with image {imagePath} and value {value}", gaugeId, imagePath, value);
             var gauge = await context.GaugeRepository.GetGauge(gaugeId);
+            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(imagePath);
+            var extension = Path.GetExtension(imagePath);
+            var newFileName = fileNameWithoutExtension + "_"+value.ToString().Replace(".", "-") + extension;
+            var localDateTime = dateTime.ToLocalTime();
             if (gauge.LastValue > value)
             {
                 logger.LogWarning("Recognized value {value} is less than last value {lastValue} for gauge {gaugeId}. Marking as failed.", value, gauge.LastValue, gaugeId);
-                MoveFile(gaugeId, imagePath, false);
+                MoveFile(gaugeId, imagePath, newFileName, false);
             }
             else
             {
+                if(gauge.LastMeasurement != null)
+                {
+                    var timeDiff = localDateTime - gauge.LastMeasurement.LastMeasurementDateTime;
+                    var valueDiff = value - gauge.LastMeasurement.CurrentValue;
+                    if (timeDiff.TotalHours > 0 && gauge.MaxValuePerHour.HasValue)
+                    {
+                        var maxAllowedIncrement = gauge.MaxValuePerHour.Value * (decimal)timeDiff.TotalHours;
+                        if (valueDiff > maxAllowedIncrement)
+                        {
+                            logger.LogWarning("Recognized value {value} exceeds maximum allowed increment {maxAllowedIncrement} for gauge {gaugeId}. Marking as failed.", value, maxAllowedIncrement, gaugeId);
+                            MoveFile(gaugeId, imagePath, newFileName, false);
+                            return;
+                        }
+                    }
+                    if(gauge.LastMeasurement.CurrentValue == value)
+                    {
+                        gauge.LastMeasurement.LastMeasurementDateTime = localDateTime;
+                    }
+                }
                 logger.LogInformation("Updating gauge {gaugeId} with new value {value}", gaugeId, value);
-                gauge.SetNewValue(value, DateTime.Now, imagePath);
+                gauge.SetNewValue(value, localDateTime, newFileName);
                 await context.SaveChangesAsync();
                 await context.MessageQueue.MQTTPublish(value.ToString().Replace(",", "."), MessageQueueRoutingKeys.WatermeterState);
                 await context.MessageQueue.Publish(new { gaugeId, value = gauge.LastValue }, MessageQueueRoutingKeys.Odecty_Gauge_Lastvaluechanged);
-                MoveFile(gaugeId, imagePath, true);
+                MoveFile(gaugeId,imagePath, newFileName, true);
             }
         }
 
-        private void MoveFile(int gaugeId, string imagePath, bool success)
+        private void MoveFile(int gaugeId, string oldPath, string newPath, bool success)
         {
             var targetFolder = success ? options.Value.RecognizedSuccessFolder : options.Value.RecognizedFailedFolder;
             targetFolder = string.Format(targetFolder, gaugeId);
-            logger.LogInformation("Moving file {imagePath} to folder {targetFolder}", imagePath, targetFolder);
+            var dateFolder = File.GetCreationTime(Path.Combine(string.Format(options.Value.Path, gaugeId), oldPath))
+                     .ToString("yyyy-MM-dd");
+            targetFolder = Path.Combine(targetFolder, dateFolder);
+            logger.LogInformation("Moving file {imagePath} to folder {targetFolder}", oldPath, targetFolder);
             if (!Directory.Exists(targetFolder))
             {
                 Directory.CreateDirectory(targetFolder);
             }
-            File.Move(Path.Combine(string.Format(options.Value.Path, gaugeId), imagePath), Path.Combine(targetFolder, imagePath));
+            File.Move(Path.Combine(string.Format(options.Value.Path, gaugeId), oldPath), Path.Combine(targetFolder, newPath));
         }
     }
 }

@@ -60,7 +60,7 @@ namespace OdectyStat1.DataLayer.Consumers
                     dynamic message = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(body);
                     using var scope = serviceProvider.CreateScope();
                     var service = scope.ServiceProvider.GetService<IGaugeService>();
-                    await service.GaugeRecognizedSucceeded(int.Parse(message.gaugeId.ToString()),message.file.ToString(), decimal.Parse(message.state.ToString(), CultureInfo.InvariantCulture));
+                    await service.GaugeRecognizedSucceeded(int.Parse(message.gaugeId.ToString()),message.file.ToString(), decimal.Parse(message.state.ToString(), CultureInfo.InvariantCulture), DateTime.Parse(message.datetime.ToString()));
                     model.BasicAck(e.DeliveryTag, false);
                 }
                 catch (Exception ex)

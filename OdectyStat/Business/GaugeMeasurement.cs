@@ -1,5 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.Identity.Client;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Security.Permissions;
 
 namespace OdectyStat1.Business
 {
@@ -17,6 +19,7 @@ namespace OdectyStat1.Business
 
         public decimal CurrentValue { get; set; }
         public string? ImagePath { get; set; }
+        public DateTime LastMeasurementDateTime { get; set; }
 
         public static MeasurementDiff operator -(GaugeMeasurement first, GaugeMeasurement second)
         {

@@ -12,6 +12,10 @@ namespace OdectyStat1.Business
         public string Description { get; set; }
         public string Type { get; set; }
         public decimal LastValue { get; set; }
+
+        [NotMapped]
+        public GaugeMeasurement LastMeasurement { get; set; }
+        public decimal? MaxValuePerHour { get; set; }
         public decimal InitialValue { get; set; }
 
         public ICollection<GaugeMeasurement> Measurements { get; set; } = new List<GaugeMeasurement>();
@@ -27,6 +31,7 @@ namespace OdectyStat1.Business
                 {
                     Value = increment,
                     MeasurementDateTime = datetime,
+                    LastMeasurementDateTime = datetime,
                     CurrentValue = newValue,
                     ImagePath = imagePath
                 });
