@@ -39,9 +39,10 @@ await Host.CreateDefaultBuilder()
          {
              opt.UseNpgsql(hostContext.Configuration.GetConnectionString("HomeAssistant"));
          })
-         .AddHostedService<MQClient>()
-         .AddHostedService<RecognizedSuccess>()
-         .AddHostedService<RecognizedFailed>();
+         .AddHostedService<ConsumerBackgroundService>()
+         .AddSingleton<IRabbitMQConsumer, MQClient>()
+         .AddSingleton<IRabbitMQConsumer, RecognizedSuccess>()
+         .AddSingleton<IRabbitMQConsumer, RecognizedFailed>();
      })
     .ConfigureLogging(logging =>
     {

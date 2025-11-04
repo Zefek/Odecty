@@ -12,44 +12,21 @@ using System.Text;
 
 namespace OdectyStat1.DataLayer.Consumers
 {
-    internal class RecognizedFailed : BackgroundService
+    internal class RecognizedFailed : RabbitMQConsumer
     {
-        private IModel model;
-        private EventingBasicConsumer consumer;
         private readonly IServiceProvider serviceProvider;
         private readonly IOptions<GaugeImageLocation> options;
         private readonly ILogger<RecognizedFailed> logger;
         private bool inProcess = false;
 
-        public RecognizedFailed(IServiceProvider serviceProvider, IOptions<GaugeImageLocation> options, RabbitMQProvider rabbitMQProvider, ILogger<RecognizedFailed> logger)
+        public RecognizedFailed(IServiceProvider serviceProvider, IOptions<GaugeImageLocation> options, ILogger<RecognizedFailed> logger, RabbitMQProvider rabbitMQProvider) : base(rabbitMQProvider, logger, QueuesToConsume.GaugeRecognizedFailed)
         {
             this.serviceProvider = serviceProvider;
             this.options = options;
             this.logger = logger;
-            model = rabbitMQProvider.CreateModel();
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-            try
-            {
-                consumer = new EventingBasicConsumer(model);
-                consumer.Received += Consumer_Received;
-                model.BasicConsume(QueuesToConsume.GaugeRecognizedFailed, false, consumer);
-                while (!stoppingToken.IsCancellationRequested)
-                {
-                    // Keep the service running
-                    await Task.Delay(1000, stoppingToken);
-                }
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e, "Error create mq client: {message}", e.Message);
-            }
-        }
-
-        private async void Consumer_Received(object? sender, BasicDeliverEventArgs e)
+        protected override void ConsumerReceived(object? sender, BasicDeliverEventArgs e)
         {
             logger.LogInformation("Data received at: {time}", DateTimeOffset.Now);
             if (!inProcess)
@@ -63,7 +40,7 @@ namespace OdectyStat1.DataLayer.Consumers
                     using var scope = serviceProvider.CreateScope();
                     var service = scope.ServiceProvider.GetService<IGaugeService>();
                     service.GaugeRecognizedFailed(int.Parse(message.gaugeId.ToString()), message.file.ToString());
-                    model.BasicAck(e.DeliveryTag, false);
+                    AcknowledgeMessage(e.DeliveryTag);
                 }
                 catch (Exception ex)
                 {
@@ -77,21 +54,8 @@ namespace OdectyStat1.DataLayer.Consumers
             else
             {
                 //redeliver message
-                model.BasicReject(e.DeliveryTag, true);
+                RejectMessage(e.DeliveryTag, true);
             }
-        }
-
-        public override void Dispose()
-        {
-            model?.Dispose();
-            base.Dispose();
-        }
-
-        public override Task StopAsync(CancellationToken cancellationToken)
-        {
-            logger.LogInformation("Worker stopping at: {time}", DateTimeOffset.Now);
-            model?.Dispose();
-            return base.StopAsync(cancellationToken);
         }
     }
 }
