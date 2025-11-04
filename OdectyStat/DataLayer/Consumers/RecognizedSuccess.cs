@@ -12,42 +12,19 @@ using System.Text;
 
 namespace OdectyStat1.DataLayer.Consumers
 {
-    internal class RecognizedSuccess : BackgroundService
+    internal class RecognizedSuccess : RabbitMQConsumer
     {
-        private IModel model;
-        private EventingBasicConsumer consumer;
         private readonly IServiceProvider serviceProvider;
         private readonly ILogger<RecognizedSuccess> logger;
         private bool inProcess = false;
 
-        public RecognizedSuccess(IServiceProvider serviceProvider, RabbitMQProvider rabbitMQProvider, ILogger<RecognizedSuccess> logger)
+        public RecognizedSuccess(IServiceProvider serviceProvider, RabbitMQProvider rabbitMQProvider, ILogger<RecognizedSuccess> logger) : base(rabbitMQProvider, logger, QueuesToConsume.GaugeRecognizedSuccess)
         {
             this.serviceProvider = serviceProvider;
             this.logger = logger;
-            model = rabbitMQProvider.CreateModel();
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-            try
-            {
-                consumer = new EventingBasicConsumer(model);
-                consumer.Received += Consumer_Received;
-                model.BasicConsume(QueuesToConsume.GaugeRecognizedSuccess, false, consumer);
-                while (!stoppingToken.IsCancellationRequested)
-                {
-                    // Keep the service running
-                    await Task.Delay(1000, stoppingToken);
-                }
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e, "Error create mq client: {message}", e.Message);
-            }
-        }
-
-        private async void Consumer_Received(object? sender, BasicDeliverEventArgs e)
+        protected override async void ConsumerReceived(object? sender, BasicDeliverEventArgs e)
         {
             logger.LogInformation("Data received at: {time}", DateTimeOffset.Now);
             if (!inProcess)
@@ -61,7 +38,7 @@ namespace OdectyStat1.DataLayer.Consumers
                     using var scope = serviceProvider.CreateScope();
                     var service = scope.ServiceProvider.GetService<IGaugeService>();
                     await service.GaugeRecognizedSucceeded(int.Parse(message.gaugeId.ToString()),message.file.ToString(), decimal.Parse(message.state.ToString(), CultureInfo.InvariantCulture), DateTime.Parse(message.datetime.ToString()));
-                    model.BasicAck(e.DeliveryTag, false);
+                    AcknowledgeMessage(e.DeliveryTag);
                 }
                 catch (Exception ex)
                 {
@@ -75,21 +52,8 @@ namespace OdectyStat1.DataLayer.Consumers
             else
             {
                 //redeliver message
-                model.BasicReject(e.DeliveryTag, true);
+                RejectMessage(e.DeliveryTag, true);
             }
-        }
-
-        public override void Dispose()
-        {
-            model?.Dispose();
-            base.Dispose();
-        }
-
-        public override Task StopAsync(CancellationToken cancellationToken)
-        {
-            logger.LogInformation("Worker stopping at: {time}", DateTimeOffset.Now);
-            model?.Dispose();
-            return base.StopAsync(cancellationToken);
         }
     }
 }
