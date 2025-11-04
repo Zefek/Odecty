@@ -17,7 +17,8 @@ public class ConsumerBackgroundService : BackgroundService
     }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        bool stopRequired = false;
+        while (!stopRequired)
         {
             foreach (var consumer in serviceProvider.GetServices<IRabbitMQConsumer>())
             {
@@ -25,9 +26,14 @@ public class ConsumerBackgroundService : BackgroundService
                 {
                     consumer.StartConsuming();
                 }
+                if (stoppingToken.IsCancellationRequested)
+                {
+                    consumer.StopConsuming();
+                }
             }
             // Placeholder for background service logic
             await Task.Delay(1000, stoppingToken);
+            stopRequired = stoppingToken.IsCancellationRequested;
         }
     }
 }
