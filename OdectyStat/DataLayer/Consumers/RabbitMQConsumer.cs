@@ -29,11 +29,14 @@ public abstract class RabbitMQConsumer : IDisposable, IRabbitMQConsumer
         if (model == null || model.IsClosed)
         {
             model = rabbitMQProvider.CreateModel();
-            model.ModelShutdown += (s, e) =>
+            if (model != null)
             {
-                StopConsuming();
-                logger.LogWarning("RabbitMQ model shutdown detected. Stopped consuming from queue: {QueueName}", queueName);
-            };
+                model.ModelShutdown += (s, e) =>
+                {
+                    StopConsuming();
+                    logger.LogWarning("RabbitMQ model shutdown detected. Stopped consuming from queue: {QueueName}", queueName);
+                };
+            }
         }
         if (model == null)
         {
