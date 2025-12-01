@@ -100,38 +100,73 @@ namespace OdectyStat1.Application
             var extension = Path.GetExtension(imagePath);
             var newFileName = fileNameWithoutExtension + "_"+value.ToString().Replace(".", "-") + extension;
             var localDateTime = dateTime.ToLocalTime();
-            if (gauge.LastValue > value)
+            bool valid = false;
+            if(gauge.LastMeasurement != null)
             {
-                logger.LogWarning("Recognized value {value} is less than last value {lastValue} for gauge {gaugeId}. Marking as failed.", value, gauge.LastValue, gaugeId);
-                MoveFile(gaugeId, imagePath, newFileName, false);
-            }
-            else
-            {
-                if(gauge.LastMeasurement != null)
+                var prevValue = gauge.LastMeasurement.CurrentValue;
+                if (gauge.LastMeasurement.CurrentValue == value)
+                {
+                    gauge.LastMeasurement.LastMeasurementDateTime = localDateTime;
+                    valid = true;
+                }
+                else
                 {
                     var timeDiff = localDateTime - gauge.LastMeasurement.LastMeasurementDateTime;
-                    var valueDiff = value - gauge.LastMeasurement.CurrentValue;
                     if (timeDiff.TotalHours > 0 && gauge.MaxValuePerHour.HasValue)
                     {
                         var maxAllowedIncrement = gauge.MaxValuePerHour.Value * (decimal)timeDiff.TotalHours;
-                        if (valueDiff > maxAllowedIncrement)
+                        if (value - prevValue <= maxAllowedIncrement && value - prevValue >= 0)
+                        {
+                            valid = true;
+                        }
+                        else
                         {
                             logger.LogWarning("Recognized value {value} exceeds maximum allowed increment {maxAllowedIncrement} for gauge {gaugeId}. Marking as failed.", value, maxAllowedIncrement, gaugeId);
-                            MoveFile(gaugeId, imagePath, newFileName, false);
-                            return;
+                            valid = false;
+
+                            decimal prevInt = Math.Truncate(prevValue);
+
+                            decimal newInt = Math.Truncate(value);
+                            decimal newDec = value - newInt;
+
+                            for (int inc = 0; inc <= 2; inc++)
+                            {
+                                decimal candidate = (prevInt + inc) + newDec;
+                                decimal diff = candidate - prevValue;
+
+                                if (diff >= 0 && diff <= maxAllowedIncrement)
+                                {
+                                    value = decimal.Round(candidate, 4);
+                                    valid = true;
+                                    break;
+                                }
+                            }
                         }
                     }
-                    if(gauge.LastMeasurement.CurrentValue == value)
-                    {
-                        gauge.LastMeasurement.LastMeasurementDateTime = localDateTime;
-                    }
                 }
+            }
+            else if (gauge.LastValue > value)
+            {
+                logger.LogWarning("Recognized value {value} is less than last value {lastValue} for gauge {gaugeId}. Marking as failed.", value, gauge.LastValue, gaugeId);
+                valid = false;
+            }
+            else
+            {
+                valid = true;
+            }
+            if (valid)
+            {
                 logger.LogInformation("Updating gauge {gaugeId} with new value {value}", gaugeId, value);
                 gauge.SetNewValue(value, localDateTime, newFileName);
                 await context.SaveChangesAsync();
                 await context.MessageQueue.MQTTPublish(value.ToString().Replace(",", "."), MessageQueueRoutingKeys.WatermeterState);
                 await context.MessageQueue.Publish(new { gaugeId, value = gauge.LastValue }, MessageQueueRoutingKeys.Odecty_Gauge_Lastvaluechanged);
-                MoveFile(gaugeId,imagePath, newFileName, true);
+                MoveFile(gaugeId, imagePath, newFileName, true);
+            }
+            else
+            {
+                logger.LogWarning("Could not validate recognized value {value} for gauge {gaugeId}. Marking as failed.", value, gaugeId);
+                MoveFile(gaugeId, imagePath, newFileName, false);
             }
         }
 
