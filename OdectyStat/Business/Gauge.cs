@@ -26,7 +26,7 @@ namespace OdectyStat1.Business
         {
             if(LastMeasurement != null && newValue == LastMeasurement.CurrentValue)
             {
-                LastMeasurement.MeasurementDateTime = datetime;
+                LastMeasurement.LastMeasurementDateTime = datetime;
                 return;
             }
             var increment = newValue - LastValue;
