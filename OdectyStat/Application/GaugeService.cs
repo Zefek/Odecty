@@ -98,15 +98,14 @@ namespace OdectyStat1.Application
             var gauge = await context.GaugeRepository.GetGauge(gaugeId);
             var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(imagePath);
             var extension = Path.GetExtension(imagePath);
-            var newFileName = fileNameWithoutExtension + "_"+value.ToString().Replace(".", "-") + extension;
+            var newFileName = fileNameWithoutExtension + "_" + value.ToString().Replace(".", "-") + extension;
             var localDateTime = dateTime.ToLocalTime();
             bool valid = false;
-            if(gauge.LastMeasurement != null)
+            if (gauge.LastMeasurement != null)
             {
                 var prevValue = gauge.LastMeasurement.CurrentValue;
                 if (gauge.LastMeasurement.CurrentValue == value)
                 {
-                    gauge.LastMeasurement.LastMeasurementDateTime = localDateTime;
                     valid = true;
                 }
                 else

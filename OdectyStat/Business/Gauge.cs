@@ -24,6 +24,11 @@ namespace OdectyStat1.Business
 
         public void SetNewValue(decimal newValue, DateTime datetime, string? imagePath = null)
         {
+            if(LastMeasurement != null && newValue == LastMeasurement.CurrentValue)
+            {
+                LastMeasurement.MeasurementDateTime = datetime;
+                return;
+            }
             var increment = newValue - LastValue;
             if (increment > 0)
             {
