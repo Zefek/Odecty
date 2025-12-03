@@ -96,9 +96,6 @@ namespace OdectyStat1.Application
         {
             logger.LogInformation("Recognition succeeded for gauge {gaugeId} with image {imagePath} and value {value}", gaugeId, imagePath, value);
             var gauge = await context.GaugeRepository.GetGauge(gaugeId);
-            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(imagePath);
-            var extension = Path.GetExtension(imagePath);
-            var newFileName = fileNameWithoutExtension + "_" + value.ToString().Replace(".", "-") + extension;
             var localDateTime = dateTime.ToLocalTime();
             bool valid = false;
             if (gauge.LastMeasurement != null)
@@ -153,6 +150,9 @@ namespace OdectyStat1.Application
             {
                 valid = true;
             }
+            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(imagePath);
+            var extension = Path.GetExtension(imagePath);
+            var newFileName = fileNameWithoutExtension + "_" + value.ToString().Replace(".", "-") + extension;
             if (valid)
             {
                 logger.LogInformation("Updating gauge {gaugeId} with new value {value}", gaugeId, value);
