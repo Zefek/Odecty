@@ -5,6 +5,8 @@ VisualStudioVersion = 17.6.33723.286
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OdectyStat1", "OdectyStat\OdectyStat1.csproj", "{04494B13-E93B-4AC4-AE56-0D05019B6DCE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Odecty.SMVAK", "Odecty.SMVAK\Odecty.SMVAK.csproj", "{05B6E757-19DB-4199-96AA-49430237E787}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{04494B13-E93B-4AC4-AE56-0D05019B6DCE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{04494B13-E93B-4AC4-AE56-0D05019B6DCE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{04494B13-E93B-4AC4-AE56-0D05019B6DCE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05B6E757-19DB-4199-96AA-49430237E787}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05B6E757-19DB-4199-96AA-49430237E787}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05B6E757-19DB-4199-96AA-49430237E787}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05B6E757-19DB-4199-96AA-49430237E787}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
