@@ -19,7 +19,19 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
+    
     - name: Restore dependencies
       run: dotnet restore
+    
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Publish aplikace
+      run: dotnet publish --configuration Release --no-build --output ./publish_output
+
+    - name: Nahrání do Artifactů
+      uses: actions/upload-artifact@v4
+      with:
+        name: Odecty
+        path: ./publish_output # Cesta ke složce, kterou jsme definovali v kroku 'Publish'
+        if-no-files-found: error
