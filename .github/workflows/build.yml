@@ -27,7 +27,7 @@ jobs:
       run: dotnet build --no-restore --configuration Release
 
     - name: Publish aplikace
-      run: dotnet publish --configuration Release --no-build --output ./publish_output
+      run: dotnet publish ./OdectyStat/OdectyStat1.csproj --configuration Release --no-build --output ./publish_output
 
     - name: Nahrání do Artifactů
       uses: actions/upload-artifact@v4
