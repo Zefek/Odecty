@@ -53,7 +53,7 @@ jobs:
           $svc = Get-Service -Name $env:SERVICE_NAME -ErrorAction Stop
           if ($svc.Status -ne 'Stopped') {
             Stop-Service -Name $env:SERVICE_NAME -Force
-            $svc.WaitForStatus('Stopped', '00:01:00')
+            $svc.WaitForStatus('Stopped', '00:02:00')
           }
 
       - name: Kopírování souborů
