@@ -9,15 +9,16 @@ using OdectyStat1.Contracts;
 using OdectyStat1.DataLayer;
 using OdectyStat1.DataLayer.Consumers;
 using OdectyStat1.Dto;
+using Serilog;
 
 
 Console.WriteLine("Hello, World!");
 await Host.CreateDefaultBuilder()
     .UseWindowsService()
-     .ConfigureAppConfiguration((hostContext, config) =>
-     {
-         config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
-     })
+    .UseSerilog((hostContext, services, configuration) =>
+    {
+        configuration.ReadFrom.Configuration(hostContext.Configuration);
+    })
     .ConfigureServices((hostContext, services) =>
      {
          services.Configure<OdectySettings>(hostContext.Configuration.GetSection("OdectySettings"));
@@ -39,23 +40,29 @@ await Host.CreateDefaultBuilder()
          {
              opt.UseNpgsql(hostContext.Configuration.GetConnectionString("HomeAssistant"));
          })
+         .AddDbContext<DiagDbContext>(opt =>
+         {
+             opt.UseNpgsql(hostContext.Configuration.GetConnectionString("Diagnostics"));
+         })
          .AddHostedService<ConsumerBackgroundService>()
          .AddSingleton<IRabbitMQConsumer, MQClient>()
          .AddSingleton<IRabbitMQConsumer, RecognizedSuccess>()
-         .AddSingleton<IRabbitMQConsumer, RecognizedFailed>();
+         .AddSingleton<IRabbitMQConsumer, RecognizedFailed>()
+         .AddHostedService<BinaryConsumerBackgroundService>()
+         .AddSingleton<IBinaryMessageHandler, HeaterDiagHandler>();
      })
-    .ConfigureLogging(logging =>
-    {
-        logging.ClearProviders();
-        logging.AddEventLog(s =>
-        {
-            s.LogName = "Application";
-            s.SourceName = "Odecty";
-        });
-        if (Environment.UserInteractive)
-        {
-            logging.AddConsole();
-        }
-    })
     .Build()
-    .RunAsync();
+    .MigrateAndRunAsync();
+
+static class HostExtensions
+{
+    public static async Task MigrateAndRunAsync(this IHost host)
+    {
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DiagDbContext>();
+            await db.Database.MigrateAsync();
+        }
+        await host.RunAsync();
+    }
+}

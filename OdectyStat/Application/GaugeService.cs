@@ -164,6 +164,11 @@ namespace OdectyStat1.Application
             }
             else
             {
+                if(gauge.LastMeasurement!=null)
+                {
+                    gauge.LastMeasurement.LastMeasurementDateTime = localDateTime;
+                    await context.SaveChangesAsync();
+                }
                 logger.LogWarning("Could not validate recognized value {value} for gauge {gaugeId}. Marking as failed.", value, gaugeId);
                 MoveFile(gaugeId, imagePath, newFileName, false);
             }
