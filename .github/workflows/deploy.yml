@@ -128,7 +128,7 @@ jobs:
               $deployScript = Join-Path $secretsDir "$env:DEVICE_NAME\deploy.ps1"
               if (-not (Test-Path $deployScript)) { throw "deploy.ps1 not found at $deployScript" }
 
-              & $deployScript -OutputDir $env:GITHUB_WORKSPACE
+              & $deployScript -OutputDir $env:TARGET_PATH
               if ($LASTEXITCODE -ne 0) { throw "deploy.ps1 failed (exit $LASTEXITCODE)" }
           }
           finally {
