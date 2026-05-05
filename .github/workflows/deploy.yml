@@ -50,20 +50,55 @@ jobs:
       - name: Zastavení služby
         shell: powershell
         run: |
-          $svc = Get-Service -Name $env:SERVICE_NAME -ErrorAction Stop
+          $ErrorActionPreference = 'Stop'
+          $svc = Get-Service -Name $env:SERVICE_NAME
+          $servicePid = (Get-CimInstance Win32_Service -Filter "Name='$($svc.Name)'").ProcessId
+
           if ($svc.Status -ne 'Stopped') {
-            Stop-Service -Name $env:SERVICE_NAME -Force
-            $svc.WaitForStatus('Stopped', '00:02:00')
+            Write-Host "Zastavuji službu $($svc.Name) (PID $servicePid, stav: $($svc.Status))"
+            try {
+              $svc.Stop()
+              $svc.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(60))
+            } catch [System.ServiceProcess.TimeoutException] {
+              Write-Warning "Služba se nezastavila do 60s, killuji strom procesů."
+              if ($servicePid -gt 0) {
+                & taskkill /PID $servicePid /T /F | Out-Null
+                $svc.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(15))
+              } else { throw }
+            }
           }
+
+          if ($servicePid -gt 0) {
+            Wait-Process -Id $servicePid -Timeout 30 -ErrorAction SilentlyContinue
+          }
+
+          Get-CimInstance Win32_Process -Filter "ParentProcessId=$servicePid" -ErrorAction SilentlyContinue |
+            ForEach-Object {
+              Write-Warning "Killuji osiřelý child proces $($_.Name) (PID $($_.ProcessId))"
+              Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+            }
 
       - name: Kopírování souborů
         shell: powershell
         run: |
+          $ErrorActionPreference = 'Stop'
           if (-not (Test-Path $env:TARGET_PATH)) {
             New-Item -ItemType Directory -Path $env:TARGET_PATH -Force | Out-Null
           }
-          Copy-Item -Path "$env:RUNNER_TEMP\deploy_payload\*" -Destination $env:TARGET_PATH -Recurse -Force
 
+          $attempts = 5
+          for ($i = 1; $i -le $attempts; $i++) {
+            try {
+              Copy-Item -Path "$env:RUNNER_TEMP\deploy_payload\*" -Destination $env:TARGET_PATH -Recurse -Force
+              break
+            } catch {
+              if ($i -eq $attempts) { throw }
+              $delay = 2 * $i
+              Write-Warning "Pokus $i/$attempts selhal: $($_.Exception.Message). Retry za $delay s."
+              Start-Sleep -Seconds $delay
+            }
+          }
+          
       - name: Spuštění služby
         if: always()
         shell: powershell
