@@ -1,0 +1,151 @@
+name: Deploy na Windows službu
+
+on:
+  deployment:
+
+  workflow_dispatch:
+    inputs:
+      artifact_run_id:
+        description: 'ID běhu workflow s artefaktem'
+        required: true
+        type: string
+      artifact_name:
+        description: 'Název artefaktu'
+        required: false
+        default: 'IoTDeployer'
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  deployments: write
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, dotnet]
+    environment: ${{ github.event.deployment.environment || 'manual' }}
+
+    env:
+      ARTIFACT_RUN_ID: ${{ github.event.deployment.payload.artifact_run_id || inputs.artifact_run_id }}
+      ARTIFACT_NAME: ${{ github.event.deployment.payload.artifact_name || inputs.artifact_name || 'IoTDeployer' }}
+      SERVICE_NAME: ${{ vars.SERVICE_NAME }}
+      TARGET_PATH: ${{ vars.TARGET_PATH }}
+
+    steps:
+      - name: Kontrola vstupů
+        shell: powershell
+        run: |
+          if (-not $env:ARTIFACT_RUN_ID) { throw 'Chybí artifact_run_id v payloadu deploymentu.' }
+          if (-not $env:SERVICE_NAME)    { throw 'Chybí proměnná prostředí SERVICE_NAME (vars.SERVICE_NAME).' }
+          if (-not $env:TARGET_PATH)     { throw 'Chybí proměnná prostředí TARGET_PATH (vars.TARGET_PATH).' }
+
+      - name: Stažení artefaktu
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ runner.temp }}\deploy_payload
+          run-id: ${{ env.ARTIFACT_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Zastavení služby
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $svc = Get-Service -Name $env:SERVICE_NAME
+          $servicePid = (Get-CimInstance Win32_Service -Filter "Name='$($svc.Name)'").ProcessId
+
+          if ($svc.Status -ne 'Stopped') {
+            Write-Host "Zastavuji službu $($svc.Name) (PID $servicePid, stav: $($svc.Status))"
+            try {
+              $svc.Stop()
+              $svc.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(60))
+            } catch [System.ServiceProcess.TimeoutException] {
+              Write-Warning "Služba se nezastavila do 60s, killuji strom procesů."
+              if ($servicePid -gt 0) {
+                & taskkill /PID $servicePid /T /F | Out-Null
+                $svc.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(15))
+              } else { throw }
+            }
+          }
+
+          if ($servicePid -gt 0) {
+            Wait-Process -Id $servicePid -Timeout 30 -ErrorAction SilentlyContinue
+          }
+
+          Get-CimInstance Win32_Process -Filter "ParentProcessId=$servicePid" -ErrorAction SilentlyContinue |
+            ForEach-Object {
+              Write-Warning "Killuji osiřelý child proces $($_.Name) (PID $($_.ProcessId))"
+              Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+            }
+
+      - name: Kopírování souborů
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not (Test-Path $env:TARGET_PATH)) {
+            New-Item -ItemType Directory -Path $env:TARGET_PATH -Force | Out-Null
+          }
+
+          $attempts = 5
+          for ($i = 1; $i -le $attempts; $i++) {
+            try {
+              Copy-Item -Path "$env:RUNNER_TEMP\deploy_payload\*" -Destination $env:TARGET_PATH -Recurse -Force
+              break
+            } catch {
+              if ($i -eq $attempts) { throw }
+              $delay = 2 * $i
+              Write-Warning "Pokus $i/$attempts selhal: $($_.Exception.Message). Retry za $delay s."
+              Start-Sleep -Seconds $delay
+            }
+          }
+
+      - name: Generate configs from secrets repo
+        shell: powershell
+        env:
+          SECRETS_SHARE_PATH: ${{ secrets.SECRETS_SHARE_PATH }}
+          SECRETS_SHARE_USER: ${{ secrets.SECRETS_SHARE_USER }}
+          SECRETS_SHARE_PASS: ${{ secrets.SECRETS_SHARE_PASS }}
+          SECRETS_REPO_NAME:  ${{ secrets.SECRETS_REPO_NAME }}
+          DEVICE_NAME:        Odecty
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $secretsDir = Join-Path $env:RUNNER_TEMP 'secrets'
+          $mounted = $false
+
+          try {
+              # Mount SMB share with read-only credentials
+              & net.exe use 'Z:' $env:SECRETS_SHARE_PATH /user:$env:SECRETS_SHARE_USER $env:SECRETS_SHARE_PASS | Out-Null
+              if ($LASTEXITCODE -ne 0) { throw "Failed to mount SMB share (exit $LASTEXITCODE)" }
+              $mounted = $true
+
+              # Clone Configuration repo from the share
+              if (Test-Path $secretsDir) { Remove-Item $secretsDir -Recurse -Force }
+              $repoSource = if ($env:SECRETS_REPO_NAME) { "Z:\$env:SECRETS_REPO_NAME" } else { 'Z:\' }
+              git clone --depth=1 $repoSource $secretsDir
+              if ($LASTEXITCODE -ne 0) { throw "git clone failed (exit $LASTEXITCODE)" }
+
+              # Run per-device deploy script
+              $deployScript = Join-Path $secretsDir "$env:DEVICE_NAME\deploy.ps1"
+              if (-not (Test-Path $deployScript)) { throw "deploy.ps1 not found at $deployScript" }
+
+              & $deployScript -OutputDir $env:GITHUB_WORKSPACE
+              if ($LASTEXITCODE -ne 0) { throw "deploy.ps1 failed (exit $LASTEXITCODE)" }
+          }
+          finally {
+              # Always clean up - whether the try block succeeded, threw, or was interrupted
+              if (Test-Path $secretsDir) {
+                  Remove-Item $secretsDir -Recurse -Force -ErrorAction SilentlyContinue
+              }
+              if ($mounted) {
+                  & net.exe use 'Z:' /delete /yes | Out-Null
+              }
+              # cleanup is best-effort; do not fail the step on a stale exit code
+              $global:LASTEXITCODE = 0
+          }
+          
+      - name: Spuštění služby
+        if: always()
+        shell: powershell
+        run: |
+          Start-Service -Name $env:SERVICE_NAME
+          (Get-Service -Name $env:SERVICE_NAME).WaitForStatus('Running', '00:01:00')
