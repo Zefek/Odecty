@@ -106,7 +106,7 @@ jobs:
           SECRETS_SHARE_USER: ${{ secrets.SECRETS_SHARE_USER }}
           SECRETS_SHARE_PASS: ${{ secrets.SECRETS_SHARE_PASS }}
           SECRETS_REPO_NAME:  ${{ secrets.SECRETS_REPO_NAME }}
-          DEVICE_NAME:        HeaterTemperatureRegulator
+          DEVICE_NAME:        Odecty
         run: |
           $ErrorActionPreference = 'Stop'
           $secretsDir = Join-Path $env:RUNNER_TEMP 'secrets'
