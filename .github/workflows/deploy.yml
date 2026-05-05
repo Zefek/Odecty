@@ -33,7 +33,7 @@ jobs:
 
     steps:
       - name: Kontrola vstupů
-        shell: pwsh
+        shell: powershell
         run: |
           if (-not $env:ARTIFACT_RUN_ID) { throw 'Chybí artifact_run_id v payloadu deploymentu.' }
           if (-not $env:SERVICE_NAME)    { throw 'Chybí proměnná prostředí SERVICE_NAME (vars.SERVICE_NAME).' }
@@ -48,7 +48,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Zastavení služby
-        shell: pwsh
+        shell: powershell
         run: |
           $svc = Get-Service -Name $env:SERVICE_NAME -ErrorAction Stop
           if ($svc.Status -ne 'Stopped') {
@@ -57,7 +57,7 @@ jobs:
           }
 
       - name: Kopírování souborů
-        shell: pwsh
+        shell: powershell
         run: |
           if (-not (Test-Path $env:TARGET_PATH)) {
             New-Item -ItemType Directory -Path $env:TARGET_PATH -Force | Out-Null
@@ -66,7 +66,7 @@ jobs:
 
       - name: Spuštění služby
         if: always()
-        shell: pwsh
+        shell: powershell
         run: |
           Start-Service -Name $env:SERVICE_NAME
           (Get-Service -Name $env:SERVICE_NAME).WaitForStatus('Running', '00:01:00')
