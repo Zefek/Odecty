@@ -10,7 +10,7 @@ public class HeaterDiagHandler : IBinaryMessageHandler
 {
     private const int ExpectedSize = 15;
 
-    public string QueueName => QueuesToConsume.HeagerDiag;
+    public string QueueName => QueuesToConsume.HeaterDiag;
 
     private readonly IServiceScopeFactory scopeFactory;
     private readonly ILogger<HeaterDiagHandler> logger;

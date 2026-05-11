@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OdectyStat1.DataLayer;
@@ -11,9 +12,11 @@ using OdectyStat1.DataLayer;
 namespace OdectyStat1.Migrations.Diagnostics
 {
     [DbContext(typeof(DiagDbContext))]
-    partial class DiagDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260509201723_AddLSSensorDiagnostics")]
+    partial class AddLSSensorDiagnostics
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,58 +24,6 @@ namespace OdectyStat1.Migrations.Diagnostics
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("OdectyStat1.Business.GarageDiagnostic", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<int>("DoorCycles")
-                        .HasColumnType("integer")
-                        .HasColumnName("door_cycles");
-
-                    b.Property<int>("FreeRam")
-                        .HasColumnType("integer")
-                        .HasColumnName("free_ram");
-
-                    b.Property<int>("LoopMaxMs")
-                        .HasColumnType("integer")
-                        .HasColumnName("loop_max_ms");
-
-                    b.Property<int>("MqttReconnects")
-                        .HasColumnType("integer")
-                        .HasColumnName("mqtt_reconnects");
-
-                    b.Property<byte>("ResetReason")
-                        .HasColumnType("smallint")
-                        .HasColumnName("reset_reason");
-
-                    b.Property<byte>("SensorErrors")
-                        .HasColumnType("smallint")
-                        .HasColumnName("sensor_errors");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("timestamp");
-
-                    b.Property<long>("UptimeMinutes")
-                        .HasColumnType("bigint")
-                        .HasColumnName("uptime_minutes");
-
-                    b.Property<int>("WifiReconnects")
-                        .HasColumnType("integer")
-                        .HasColumnName("wifi_reconnects");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex(new[] { "Timestamp" }, "ix_garage_diagnostics_timestamp");
-
-                    b.ToTable("garage_diagnostics", (string)null);
-                });
 
             modelBuilder.Entity("OdectyStat1.Business.HeaterDiagnostic", b =>
                 {

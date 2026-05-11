@@ -49,7 +49,9 @@ await Host.CreateDefaultBuilder()
          .AddSingleton<IRabbitMQConsumer, RecognizedSuccess>()
          .AddSingleton<IRabbitMQConsumer, RecognizedFailed>()
          .AddHostedService<BinaryConsumerBackgroundService>()
-         .AddSingleton<IBinaryMessageHandler, HeaterDiagHandler>();
+         .AddSingleton<IBinaryMessageHandler, HeaterDiagHandler>()
+         .AddSingleton<IBinaryMessageHandler, LSSensorDiagHandler>()
+         .AddSingleton<IBinaryMessageHandler, GarageDiagHandler>();
      })
     .Build()
     .MigrateAndRunAsync();
