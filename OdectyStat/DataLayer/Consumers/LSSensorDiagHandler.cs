@@ -8,7 +8,7 @@ namespace OdectyStat1.DataLayer.Consumers;
 
 public class LSSensorDiagHandler : IBinaryMessageHandler
 {
-    private const int ExpectedSize = 13;
+    private const int ExpectedSize = 14;
 
     public string QueueName => QueuesToConsume.LSSensorDiag;
 
@@ -36,8 +36,8 @@ public class LSSensorDiagHandler : IBinaryMessageHandler
         db.LSSensorDiagnostics.Add(data);
         await db.SaveChangesAsync(ct);
 
-        logger.LogDebug("Saved LSSensor diagnostic: uptime={Uptime}min, freeRam={FreeRam}B, loopMax={LoopMax}ms",
-            data.UptimeMinutes, data.FreeRam, data.LoopMaxMs);
+        logger.LogDebug("Saved LSSensor diagnostic: uptime={Uptime}min, freeRam={FreeRam}B, loopMax={LoopMax}ms, rssi={Rssi}dBm",
+            data.UptimeMinutes, data.FreeRam, data.LoopMaxMs, data.Rssi);
     }
 
     private static LSSensorDiagnostic ParseDiagData(ReadOnlySpan<byte> span)
@@ -49,6 +49,7 @@ public class LSSensorDiagHandler : IBinaryMessageHandler
         // offset 8:  uint16 mqttFailCount
         // offset 10: uint8  resetReason
         // offset 11: uint16 loopMaxMs
+        // offset 13: int8   rssi (dBm, signed)
         return new LSSensorDiagnostic
         {
             Timestamp = DateTime.UtcNow,
@@ -57,7 +58,8 @@ public class LSSensorDiagHandler : IBinaryMessageHandler
             WifiReconnects = BinaryPrimitives.ReadUInt16LittleEndian(span[6..]),
             MqttFailCount = BinaryPrimitives.ReadUInt16LittleEndian(span[8..]),
             ResetReason = span[10],
-            LoopMaxMs = BinaryPrimitives.ReadUInt16LittleEndian(span[11..])
+            LoopMaxMs = BinaryPrimitives.ReadUInt16LittleEndian(span[11..]),
+            Rssi = (sbyte)span[13]
         };
     }
 }
