@@ -19,6 +19,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseWindowsService();
 
+var otlpEndpoint = new Uri(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] ?? "http://localhost:4317");
+
 builder.Logging.ClearProviders();
 builder.Logging.AddOpenTelemetry(opt =>
 {
@@ -26,7 +28,7 @@ builder.Logging.AddOpenTelemetry(opt =>
     opt.IncludeScopes = true;
     opt.ParseStateValues = true;
     opt.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(ServiceName));
-    opt.AddOtlpExporter();
+    opt.AddOtlpExporter(o => o.Endpoint = otlpEndpoint);
 });
 
 builder.Services.AddOpenTelemetry()
@@ -35,14 +37,14 @@ builder.Services.AddOpenTelemetry()
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
         .AddEntityFrameworkCoreInstrumentation()
-        .AddOtlpExporter())
+        .AddOtlpExporter(o => o.Endpoint = otlpEndpoint))
     .WithMetrics(m => m
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
         .AddRuntimeInstrumentation()
         .AddMeter("Npgsql")
         .AddMeter("Microsoft.Data.SqlClient.EventSource")
-        .AddOtlpExporter());
+        .AddOtlpExporter(o => o.Endpoint = otlpEndpoint));
 
 builder.Services.Configure<OdectySettings>(builder.Configuration.GetSection("OdectySettings"));
 builder.Services.Configure<GaugeImageLocation>(builder.Configuration.GetSection("GaugeImageLocation"));
