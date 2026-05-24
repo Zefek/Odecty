@@ -1,8 +1,6 @@
 name: Deploy na Windows službu
 
 on:
-  deployment:
-
   workflow_dispatch:
     inputs:
       artifact_run_id:
@@ -14,6 +12,11 @@ on:
         required: false
         default: 'IoTDeployer'
         type: string
+      environment:
+        required: true
+        type: choice
+        options:
+          - Home
 
 permissions:
   contents: read
@@ -23,11 +26,11 @@ permissions:
 jobs:
   deploy:
     runs-on: [self-hosted, dotnet]
-    environment: ${{ github.event.deployment.environment || 'manual' }}
+    environment: ${{ github.event.inputs.environment || 'manual' }}
 
     env:
-      ARTIFACT_RUN_ID: ${{ github.event.deployment.payload.artifact_run_id || inputs.artifact_run_id }}
-      ARTIFACT_NAME: ${{ github.event.deployment.payload.artifact_name || inputs.artifact_name || 'IoTDeployer' }}
+      ARTIFACT_RUN_ID: ${{ github.event.inputs.artifact_run_id || inputs.artifact_run_id }}
+      ARTIFACT_NAME: ${{ github.event.inputs.artifact_name || inputs.artifact_name || 'IoTDeployer' }}
       SERVICE_NAME: ${{ vars.SERVICE_NAME }}
       TARGET_PATH: ${{ vars.TARGET_PATH }}
 
