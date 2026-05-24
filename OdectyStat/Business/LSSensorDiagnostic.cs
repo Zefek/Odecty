@@ -10,4 +10,5 @@ public class LSSensorDiagnostic
     public int MqttFailCount { get; set; }
     public byte ResetReason { get; set; }
     public int LoopMaxMs { get; set; }
+    public sbyte? Rssi { get; set; }
 }

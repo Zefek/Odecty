@@ -11,4 +11,5 @@ public class HeaterDiagnostic
     public int SensorErrors { get; set; }
     public byte ResetReason { get; set; }
     public int LoopMaxMs { get; set; }
+    public sbyte? Rssi { get; set; }
 }

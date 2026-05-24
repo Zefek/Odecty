@@ -31,6 +31,7 @@ public class DiagDbContext : DbContext
             entity.Property(e => e.SensorErrors).HasColumnName("sensor_errors");
             entity.Property(e => e.ResetReason).HasColumnName("reset_reason");
             entity.Property(e => e.LoopMaxMs).HasColumnName("loop_max_ms");
+            entity.Property(e => e.Rssi).HasColumnName("rssi");
 
             entity.HasIndex(e => e.Timestamp, "ix_heater_diagnostics_timestamp");
         });
@@ -48,6 +49,7 @@ public class DiagDbContext : DbContext
             entity.Property(e => e.MqttFailCount).HasColumnName("mqtt_fail_count");
             entity.Property(e => e.ResetReason).HasColumnName("reset_reason");
             entity.Property(e => e.LoopMaxMs).HasColumnName("loop_max_ms");
+            entity.Property(e => e.Rssi).HasColumnName("rssi");
 
             entity.HasIndex(e => e.Timestamp, "ix_ls_sensor_diagnostics_timestamp");
         });
@@ -67,6 +69,7 @@ public class DiagDbContext : DbContext
             entity.Property(e => e.ResetReason).HasColumnName("reset_reason");
             entity.Property(e => e.LoopMaxMs).HasColumnName("loop_max_ms");
             entity.Property(e => e.DoorCycles).HasColumnName("door_cycles");
+            entity.Property(e => e.Rssi).HasColumnName("rssi");
 
             entity.HasIndex(e => e.Timestamp, "ix_garage_diagnostics_timestamp");
         });

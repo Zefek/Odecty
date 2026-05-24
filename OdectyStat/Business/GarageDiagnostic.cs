@@ -12,4 +12,5 @@ public class GarageDiagnostic
     public byte ResetReason { get; set; }
     public int LoopMaxMs { get; set; }
     public int DoorCycles { get; set; }
+    public sbyte? Rssi { get; set; }
 }

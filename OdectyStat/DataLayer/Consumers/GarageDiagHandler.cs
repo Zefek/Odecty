@@ -8,7 +8,7 @@ namespace OdectyStat1.DataLayer.Consumers;
 
 public class GarageDiagHandler : IBinaryMessageHandler
 {
-    private const int ExpectedSize = 16;
+    private const int ExpectedSize = 17;
 
     public string QueueName => QueuesToConsume.GarageDiag;
 
@@ -36,8 +36,8 @@ public class GarageDiagHandler : IBinaryMessageHandler
         db.GarageDiagnostics.Add(data);
         await db.SaveChangesAsync(ct);
 
-        logger.LogDebug("Saved Garage diagnostic: uptime={Uptime}min, freeRam={FreeRam}B, loopMax={LoopMax}ms, doorCycles={DoorCycles}",
-            data.UptimeMinutes, data.FreeRam, data.LoopMaxMs, data.DoorCycles);
+        logger.LogDebug("Saved Garage diagnostic: uptime={Uptime}min, freeRam={FreeRam}B, loopMax={LoopMax}ms, doorCycles={DoorCycles}, rssi={Rssi}dBm",
+            data.UptimeMinutes, data.FreeRam, data.LoopMaxMs, data.DoorCycles, data.Rssi);
     }
 
     private static GarageDiagnostic ParseDiagData(ReadOnlySpan<byte> span)
@@ -51,6 +51,7 @@ public class GarageDiagHandler : IBinaryMessageHandler
         // offset 11: uint8  resetReason
         // offset 12: uint16 loopMaxMs
         // offset 14: uint16 doorCycles
+        // offset 16: int8   rssi (dBm, signed)
         return new GarageDiagnostic
         {
             Timestamp = DateTime.UtcNow,
@@ -61,7 +62,8 @@ public class GarageDiagHandler : IBinaryMessageHandler
             SensorErrors = span[10],
             ResetReason = span[11],
             LoopMaxMs = BinaryPrimitives.ReadUInt16LittleEndian(span[12..]),
-            DoorCycles = BinaryPrimitives.ReadUInt16LittleEndian(span[14..])
+            DoorCycles = BinaryPrimitives.ReadUInt16LittleEndian(span[14..]),
+            Rssi = (sbyte)span[16]
         };
     }
 }
