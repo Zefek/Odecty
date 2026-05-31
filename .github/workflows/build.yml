@@ -30,7 +30,7 @@ jobs:
       run: dotnet publish --configuration Release --no-build --output ./publish_output
 
     - name: Nahrání do Artifactů
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: Odecty
         path: ./publish_output # Cesta ke složce, kterou jsme definovali v kroku 'Publish'
