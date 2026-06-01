@@ -23,6 +23,11 @@ namespace OdectyStat1.Application
         {
             Console.WriteLine("Add new value " + newValue.GaugeId);
             var gauge = await context.GaugeRepository.GetGauge(newValue.GaugeId);
+            if (gauge == null)
+            {
+                logger.LogError("Gauge {gaugeId} not found.", newValue.GaugeId);
+                throw new Exception($"Gauge {newValue.GaugeId} not found.");
+            }
             gauge.SetNewValue(newValue.Value, newValue.Datetime);
             await context.SaveChangesAsync();
             await context.MessageQueue.Publish(new { gaugeId = newValue.GaugeId, value = gauge.LastValue }, MessageQueueRoutingKeys.Odecty_Gauge_Lastvaluechanged);
@@ -82,7 +87,7 @@ namespace OdectyStat1.Application
         public async Task AddIncrement(int gaugeId, decimal increment, DateTime datetime)
         {
             var gauge = await context.GaugeRepository.GetGauge(gaugeId);
-            gauge.AddIncrement(increment, datetime);
+            gauge?.AddIncrement(increment, datetime);
             await context.SaveChangesAsync();
         }
 
@@ -96,6 +101,11 @@ namespace OdectyStat1.Application
         {
             logger.LogInformation("Recognition succeeded for gauge {gaugeId} with image {imagePath} and value {value}", gaugeId, imagePath, value);
             var gauge = await context.GaugeRepository.GetGauge(gaugeId);
+            if (gauge == null)
+            {
+                logger.LogError("Gauge {gaugeId} not found", gaugeId);
+                throw new Exception($"Gauge {gaugeId} not found.");
+            }
             var localDateTime = dateTime.ToLocalTime();
             bool valid = false;
             if (gauge.LastMeasurement != null)

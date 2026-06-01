@@ -2,11 +2,12 @@
 using Microsoft.Extensions.Options;
 using OdectyStat1.Dto;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 
 namespace OdectyStat1.DataLayer;
-public class RabbitMQProvider : IDisposable
+public class RabbitMQProvider : IAsyncDisposable
 {
-    private IConnection connection;
+    private IConnection? connection;
     private readonly IOptions<OdectySettings> options;
     private readonly ILogger<RabbitMQProvider> logger;
     private bool first = true;
@@ -16,8 +17,11 @@ public class RabbitMQProvider : IDisposable
     private readonly Random random = new Random();
     private DateTime? lastAttemptTime = null;
     private TimeSpan? connectionDelay = null;
+    private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
+    private readonly SemaphoreSlim semaphoreConnect = new SemaphoreSlim(1, 1);
 
-    public EventHandler ConnectionShutdown = new EventHandler((s, e) => { });
+
+    public AsyncEventHandler<ShutdownEventArgs> ConnectionShutdown = new AsyncEventHandler<ShutdownEventArgs>((s, e) => Task.CompletedTask);
 
     public RabbitMQProvider(IOptions<OdectySettings> options, ILogger<RabbitMQProvider> logger)
     {
@@ -30,21 +34,25 @@ public class RabbitMQProvider : IDisposable
         this.logger = logger;
     }
 
-    private void Connect()
+    private async Task Connect()
     {
         if(lastAttemptTime.HasValue && connectionDelay.HasValue  && (DateTime.Now - lastAttemptTime.Value) < connectionDelay || connection != null)
         {
             return;
         }
+        await semaphoreConnect.WaitAsync();
         try
         {
-            connection = factory.CreateConnection();
-            connection.ConnectionShutdown += Connection_ConnectionShutdown;
-            isConnected = true;
-            logger.LogInformation("Successfully connected to RabbitMQ at {HostName}", factory.HostName);
-            lastAttemptTime = null;
-            connectionDelay = null;
-            return;
+            if (connection == null)
+            {
+                connection = await factory.CreateConnectionAsync();
+                connection.ConnectionShutdownAsync += Connection_ConnectionShutdown;
+                isConnected = true;
+                logger.LogInformation("Successfully connected to RabbitMQ at {HostName}", factory.HostName);
+                lastAttemptTime = null;
+                connectionDelay = null;
+                first = true;
+            }
         }
         catch (Exception ex)
         {
@@ -55,22 +63,40 @@ public class RabbitMQProvider : IDisposable
             logger.LogWarning(ex, "Failed to connect to RabbitMQ at {HostName}, retrying in {Delay}ms)",
                 factory.HostName, connectionDelay.Value.TotalMilliseconds);
         }
+        finally
+        {
+            semaphoreConnect.Release();
+        }
     }
 
 
-    private void Connection_ConnectionShutdown(object? sender, ShutdownEventArgs e)
+    private async Task Connection_ConnectionShutdown(object sender, ShutdownEventArgs e)
     {
-        connection?.Close();
-        connection?.Dispose();
-        connection = null;
+        if (connection != null)
+        {
+            foreach (AsyncEventHandler<ShutdownEventArgs> handler in ConnectionShutdown.GetInvocationList())
+            {
+                try
+                {
+                    await handler(sender, e);
+                }
+                catch(Exception ex)
+                {
+                    logger.LogError(ex, ex.Message);
+                }
+            }
+            await connection.CloseAsync();
+            connection.Dispose();
+            connection = null;
+        }
         isConnected = false;
     }
 
-    public IModel CreateModel()
+    public async Task<IChannel?> CreateModel()
     {
-        if(!isConnected)
+        if(!isConnected || connection == null)
         {
-            Connect();
+            await Connect();
         }
         if(!isConnected)
         {
@@ -78,32 +104,47 @@ public class RabbitMQProvider : IDisposable
         }
         if (first)
         {
-            using var model = connection.CreateModel();
-            model.ExchangeDeclare(options.Value.ExchangeName, ExchangeType.Direct, true, false, null);
-            foreach (var exchange in options.Value.QueueMappings.Select(q => q.ExchangeName).Distinct())
+            await semaphore.WaitAsync();
+            try
             {
-                if (exchange.StartsWith("amq."))
+                if (first)
                 {
-                    continue;
+                    using var model = await connection!.CreateChannelAsync();
+                    await model.ExchangeDeclareAsync(options.Value.ExchangeName, ExchangeType.Direct, true, false, null);
+                    foreach (var exchange in options.Value.QueueMappings.Select(q => q.ExchangeName).Distinct())
+                    {
+                        if (exchange == null || exchange.StartsWith("amq."))
+                        {
+                            continue;
+                        }
+                        await model.ExchangeDeclareAsync(exchange, ExchangeType.Direct, true, false, null);
+                    }
+                    foreach (var queue in options.Value.QueueMappings.Select(q => q.QueueName).Distinct())
+                    {
+                        await model.QueueDeclareAsync(queue, true, false, false, null);
+                    }
+                    foreach (var map in options.Value.QueueMappings)
+                    {
+                        await model.QueueBindAsync(map.QueueName, map.ExchangeName, map.RoutingKey ?? string.Empty);
+                    }
+                    first = false;
                 }
-                model.ExchangeDeclare(exchange, ExchangeType.Direct, true, false, null);
             }
-            foreach (var queue in options.Value.QueueMappings.Select(q => q.QueueName).Distinct())
+            finally
             {
-                model.QueueDeclare(queue, true, false, false, null);
+                semaphore.Release();
             }
-            foreach (var map in options.Value.QueueMappings)
-            {
-                model.QueueBind(map.QueueName, map.ExchangeName, map.RoutingKey);
-            }
-            first = false;
         }
-        return connection.CreateModel();
+        return await connection!.CreateChannelAsync();
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        connection?.Close();
+        if (connection != null)
+        {
+            await connection.CloseAsync();
+            await connection.DisposeAsync();
+        }
         connection = null;
     }
 }

@@ -4,7 +4,6 @@
     {
         IGaugeRepository GaugeRepository { get; }
         IMeasurementDayRepository MeasurementDayRepository { get; }
-        IExcelProvider ExcelProvider { get; }
         IMeasurementStatisticsRepository MeasurementStatisticsRepository { get; }
         IMeasurementRepository MeasurementRepository { get; }
         IHomeAssistantStatisticsRepository HomeAssistantStatisticsRepository { get; }

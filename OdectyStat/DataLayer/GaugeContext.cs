@@ -10,7 +10,6 @@ namespace OdectyStat1.DataLayer
         public GaugeContext(IGaugeRepository gaugeRepository,
             GaugeDbContext context,
             IMeasurementDayRepository measurementDayRepository,
-            //IExcelProvider excelProvider,
             IMeasurementStatisticsRepository measurementStatisticsRepository,
             IMeasurementRepository measurementRepository,
             IHomeAssistantStatisticsRepository homeAssistantStatisticsRepository,
@@ -20,7 +19,6 @@ namespace OdectyStat1.DataLayer
             GaugeRepository = gaugeRepository;
             this.context = context;
             MeasurementDayRepository = measurementDayRepository;
-            //ExcelProvider=excelProvider;
             MeasurementStatisticsRepository = measurementStatisticsRepository;
             MeasurementRepository = measurementRepository;
             HomeAssistantStatisticsRepository = homeAssistantStatisticsRepository;
@@ -30,7 +28,6 @@ namespace OdectyStat1.DataLayer
 
         public IGaugeRepository GaugeRepository { get; }
         public IMeasurementDayRepository MeasurementDayRepository { get; }
-        public IExcelProvider ExcelProvider { get; }
 
         public IMeasurementStatisticsRepository MeasurementStatisticsRepository { get; }
 
@@ -41,14 +38,20 @@ namespace OdectyStat1.DataLayer
 
         public void AddHomeAssistant<TEntity>(TEntity entity)
         {
-            homeAssistantDbContext.Add(entity);
+            if (entity != null)
+            {
+                homeAssistantDbContext.Add(entity);
+            }
         }
 
         public void AddRange<TEntity>(ICollection<TEntity> entities)
         {
             foreach (TEntity entity in entities)
             {
-                context.Add(entity);
+                if (entity != null)
+                {
+                    context.Add(entity);
+                }
             }
         }
 

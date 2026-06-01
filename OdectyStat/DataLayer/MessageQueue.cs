@@ -7,30 +7,51 @@ using System.Text;
 namespace OdectyStat1.DataLayer;
 public class MessageQueue : IMessageQueue, IDisposable
 {
-    private readonly IModel model;
+    private IChannel? model;
+    private readonly RabbitMQProvider rabbitMQProvider;
     private readonly IOptions<OdectySettings> options;
+    private readonly ILogger<MessageQueue> logger;
 
-    public MessageQueue(RabbitMQProvider rabbitMQProvider, IOptions<OdectySettings> options)
+    public MessageQueue(RabbitMQProvider rabbitMQProvider, IOptions<OdectySettings> options, ILogger<MessageQueue> logger)
     {
-        model = rabbitMQProvider.CreateModel();
+        this.rabbitMQProvider = rabbitMQProvider;
         this.options = options;
+        this.logger = logger;
     }
-    public Task Publish(object message, string routingKey)
+    public async Task Publish(object message, string routingKey)
     {
-        model.BasicPublish(exchange: options.Value.ExchangeName,
+        if(model == null)
+        {
+            model = await rabbitMQProvider.CreateModel();
+            if(model == null)
+            {
+                logger.LogWarning("Channel could not be created.");
+                return;
+            }
+        }
+        await model.BasicPublishAsync(exchange: options.Value.ExchangeName,
                              routingKey: routingKey,
-                             basicProperties: null,
+                             mandatory: false,
+                             basicProperties: new BasicProperties(),
                              body: Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(message)));
-        return Task.CompletedTask;
     }
 
-    public Task MQTTPublish(string message, string routingKey)
+    public async Task MQTTPublish(string message, string routingKey)
     {
-        model.BasicPublish(exchange: "amq.topic",
+        if (model == null)
+        {
+            model = await rabbitMQProvider.CreateModel();
+            if (model == null)
+            {
+                logger.LogWarning("Channel could not be created.");
+                return;
+            }
+        }
+        await model.BasicPublishAsync(exchange: "amq.topic",
                              routingKey: routingKey,
-                             basicProperties: null,
+                             mandatory: false,
+                             basicProperties: new BasicProperties(),
                              body: Encoding.UTF8.GetBytes(message));
-        return Task.CompletedTask;
     }
 
     public void Dispose()
