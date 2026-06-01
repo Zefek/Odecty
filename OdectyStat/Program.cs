@@ -12,6 +12,7 @@ using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using RabbitMQ.Client;
 
 const string ServiceName = "OdectyStat";
 
@@ -89,10 +90,17 @@ builder.Services.AddHealthChecks()
         name: "postgres-diagnostics",
         tags: new[] { "ready" })
     .AddRabbitMQ(
-        (sp, opts) =>
+        async (sp) =>
         {
             var s = sp.GetRequiredService<IOptions<OdectySettings>>().Value;
-            opts.ConnectionUri = new Uri($"amqp://{Uri.EscapeDataString(s.RabbitMQUsername)}:{Uri.EscapeDataString(s.RabbitMQPassword)}@{s.RabbitMQHost}/{Uri.EscapeDataString(s.RabbitMQVHost)}");
+            var factory = new ConnectionFactory
+            {
+                UserName = s.RabbitMQUsername,
+                Password = s.RabbitMQPassword,
+                HostName = s.RabbitMQHost,
+                VirtualHost = s.RabbitMQVHost
+            };
+            return await factory.CreateConnectionAsync();
         },
         name: "rabbitmq",
         tags: new[] { "ready" });

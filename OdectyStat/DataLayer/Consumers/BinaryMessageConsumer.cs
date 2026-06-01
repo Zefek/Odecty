@@ -19,17 +19,17 @@ public class BinaryMessageConsumer : RabbitMQConsumer
         this.logger = logger;
     }
 
-    protected override async void ConsumerReceived(object? sender, BasicDeliverEventArgs e)
+    protected override async Task ConsumerReceived(object? sender, BasicDeliverEventArgs e)
     {
         try
         {
             await handler.HandleAsync(e.Body, CancellationToken.None);
-            AcknowledgeMessage(e.DeliveryTag);
+            await AcknowledgeMessage(e.DeliveryTag);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to process binary message from queue {QueueName}", handler.QueueName);
-            RejectMessage(e.DeliveryTag, requeue: false);
+            await RejectMessage(e.DeliveryTag, requeue: false);
         }
     }
 }

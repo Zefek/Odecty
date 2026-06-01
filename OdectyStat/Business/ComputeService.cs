@@ -1,4 +1,5 @@
-﻿using OdectyStat1.Business;
+﻿#nullable disable
+using OdectyStat1.Business;
 using OdectyStat1.Entities;
 namespace OdectyStat1
 {

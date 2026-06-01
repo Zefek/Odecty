@@ -35,12 +35,12 @@ public class BinaryConsumerBackgroundService : BackgroundService
             {
                 if (!consumer.IsConsuming)
                 {
-                    consumer.StartConsuming();
+                    await consumer.StartConsuming();
                 }
 
                 if (stoppingToken.IsCancellationRequested)
                 {
-                    consumer.StopConsuming();
+                    await consumer.StopConsuming();
                 }
             }
 
@@ -49,8 +49,8 @@ public class BinaryConsumerBackgroundService : BackgroundService
 
         foreach (var consumer in consumers)
         {
-            consumer.StopConsuming();
-            consumer.Dispose();
+            await consumer.StopConsuming();
+            await consumer.DisposeAsync();
         }
     }
 }

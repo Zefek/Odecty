@@ -26,7 +26,7 @@ namespace OdectyStat1.DataLayer.Consumers
             this.logger = logger;
         }
 
-        protected override void ConsumerReceived(object? sender, BasicDeliverEventArgs e)
+        protected override async Task ConsumerReceived(object? sender, BasicDeliverEventArgs e)
         {
             logger.LogInformation("Data received at: {time}", DateTimeOffset.Now);
             if (!inProcess)
@@ -36,15 +36,23 @@ namespace OdectyStat1.DataLayer.Consumers
                     inProcess = true;
                     var body = Encoding.UTF8.GetString(e.Body.ToArray());
                     logger.LogInformation("Data received {body}", body);
-                    dynamic message = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(body);
-                    using var scope = serviceProvider.CreateScope();
-                    var service = scope.ServiceProvider.GetService<IGaugeService>();
-                    service.GaugeRecognizedFailed(int.Parse(message.gaugeId.ToString()), message.file.ToString());
-                    AcknowledgeMessage(e.DeliveryTag);
+                    dynamic? message = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(body);
+                    if (message != null)
+                    {
+                        using var scope = serviceProvider.CreateScope();
+                        var service = scope.ServiceProvider.GetService<IGaugeService>();
+                        service!.GaugeRecognizedFailed(int.Parse(message.gaugeId.ToString()), message.file.ToString());
+                        await AcknowledgeMessage(e.DeliveryTag);
+                    }
+                    else
+                    {
+                        await RejectMessage(e.DeliveryTag);
+                    }
                 }
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Error processing data: {message}", ex.Message);
+                    await RejectMessage(e.DeliveryTag);
                 }
                 finally
                 {
@@ -54,7 +62,7 @@ namespace OdectyStat1.DataLayer.Consumers
             else
             {
                 //redeliver message
-                RejectMessage(e.DeliveryTag, true);
+                await RejectMessage(e.DeliveryTag, true);
             }
         }
     }

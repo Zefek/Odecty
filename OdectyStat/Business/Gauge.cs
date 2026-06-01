@@ -9,12 +9,12 @@ namespace OdectyStat1.Business
     {
         [Key]
         public int Id { get; set; }
-        public string Description { get; set; }
-        public string Type { get; set; }
+        public string? Description { get; set; }
+        public required string Type { get; set; }
         public decimal LastValue { get; set; }
 
         [NotMapped]
-        public GaugeMeasurement LastMeasurement { get; set; }
+        public GaugeMeasurement? LastMeasurement { get; set; }
         public decimal? MaxValuePerHour { get; set; }
         public decimal InitialValue { get; set; }
 
