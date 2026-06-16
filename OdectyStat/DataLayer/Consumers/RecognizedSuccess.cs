@@ -39,7 +39,14 @@ namespace OdectyStat1.DataLayer.Consumers
                     {
                         using var scope = serviceProvider.CreateScope();
                         var service = scope.ServiceProvider.GetService<IGaugeService>();
-                        await service!.GaugeRecognizedSucceeded(int.Parse(message.gaugeId.ToString()), message.file.ToString(), decimal.Parse(message.state.ToString(), CultureInfo.InvariantCulture), DateTime.Parse(message.datetime.ToString()));
+                        decimal? confidence = null;
+                        var confidenceToken = message.confidence;
+                        string? confidenceText = confidenceToken?.ToString();
+                        if (decimal.TryParse(confidenceText, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal parsedConfidence))
+                        {
+                            confidence = parsedConfidence;
+                        }
+                        await service!.GaugeRecognizedSucceeded(int.Parse(message.gaugeId.ToString()), message.file.ToString(), decimal.Parse(message.state.ToString(), CultureInfo.InvariantCulture), DateTime.Parse(message.datetime.ToString()), confidence);
                         await AcknowledgeMessage(e.DeliveryTag);
                     }
                     else

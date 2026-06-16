@@ -25,6 +25,7 @@ namespace OdectyStat1.DataLayer
             {
                 opt.Property(k => k.Value).HasPrecision(19, 4);
                 opt.Property(k => k.CurrentValue).HasPrecision(19, 4);
+                opt.Property(k=>k.Confidence).HasPrecision(19, 4);
             });
 
             modelBuilder.Entity<GaugeMeasuerementStatistics>(opt =>

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using OdectyStat1.Business;
 using OdectyStat1.Contracts;
 using OdectyStat1.Dto;
@@ -97,7 +98,7 @@ namespace OdectyStat1.Application
             MoveFile(gaugeId, imagePath, imagePath, false);
         }
 
-        public async Task GaugeRecognizedSucceeded(int gaugeId, string imagePath, decimal value, DateTime dateTime)
+        public async Task GaugeRecognizedSucceeded(int gaugeId, string imagePath, decimal value, DateTime dateTime, decimal? confidence)
         {
             logger.LogInformation("Recognition succeeded for gauge {gaugeId} with image {imagePath} and value {value}", gaugeId, imagePath, value);
             var gauge = await context.GaugeRepository.GetGauge(gaugeId);
@@ -166,15 +167,15 @@ namespace OdectyStat1.Application
             if (valid)
             {
                 logger.LogInformation("Updating gauge {gaugeId} with new value {value}", gaugeId, value);
-                gauge.SetNewValue(value, localDateTime, newFileName);
+                gauge.SetNewValue(value, localDateTime, newFileName, confidence);
                 await context.SaveChangesAsync();
-                await context.MessageQueue.MQTTPublish(value.ToString().Replace(",", "."), MessageQueueRoutingKeys.WatermeterState);
+                await context.MessageQueue.MQTTPublish(JsonConvert.SerializeObject(new { Value = value.ToString().Replace(",", "."), Confidence = confidence }), MessageQueueRoutingKeys.WatermeterState);
                 await context.MessageQueue.Publish(new { gaugeId, value = gauge.LastValue }, MessageQueueRoutingKeys.Odecty_Gauge_Lastvaluechanged);
                 MoveFile(gaugeId, imagePath, newFileName, true);
             }
             else
             {
-                if(gauge.LastMeasurement!=null)
+                if (gauge.LastMeasurement != null)
                 {
                     gauge.LastMeasurement.LastMeasurementDateTime = localDateTime;
                     await context.SaveChangesAsync();
