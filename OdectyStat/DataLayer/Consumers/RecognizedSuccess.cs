@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Linq;
 using OdectyStat1.Application;
 using OdectyStat1.DataLayer;
 using OdectyStat1.Dto;
@@ -39,13 +40,10 @@ namespace OdectyStat1.DataLayer.Consumers
                     {
                         using var scope = serviceProvider.CreateScope();
                         var service = scope.ServiceProvider.GetService<IGaugeService>();
-                        decimal? confidence = null;
-                        var confidenceToken = message.confidence;
-                        string? confidenceText = confidenceToken?.ToString();
-                        if (decimal.TryParse(confidenceText, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal parsedConfidence))
-                        {
-                            confidence = parsedConfidence;
-                        }
+                        // Číslo čteme přímo z JSON tokenu (culture-invariant). Přes .ToString()
+                        // by se desetinná čárka aktuální culture zaměnila za oddělovač tisíců.
+                        JToken? confidenceToken = message.confidence;
+                        decimal? confidence = confidenceToken?.Value<decimal?>();
                         await service!.GaugeRecognizedSucceeded(int.Parse(message.gaugeId.ToString()), message.file.ToString(), decimal.Parse(message.state.ToString(), CultureInfo.InvariantCulture), DateTime.Parse(message.datetime.ToString()), confidence);
                         await AcknowledgeMessage(e.DeliveryTag);
                     }
