@@ -79,8 +79,16 @@ internal class GaugeQueryService : IGaugeQueryService
     private string? ResolvePhotoPath(int gaugeId, string imagePath, DateTime measurementDateTime)
     {
         var gaugeFolder = string.Format(imageLocation.Value.RecognizedSuccessFolder, gaugeId);
-        var measurementDate = measurementDateTime.Date;
 
+        // Nový formát: ImagePath obsahuje i datovou podsložku (yyyy-MM-dd/soubor.jpg) → použij přímo.
+        if (imagePath.Contains('/') || imagePath.Contains('\\'))
+        {
+            var direct = Path.Combine(gaugeFolder, imagePath);
+            return File.Exists(direct) ? direct : null;
+        }
+
+        // Starý formát: jen název souboru → datovou složku odhadneme podle data měření (±1 den).
+        var measurementDate = measurementDateTime.Date;
         foreach (var offset in new[] { 0, -1, 1 })
         {
             var dateFolder = measurementDate.AddDays(offset).ToString("yyyy-MM-dd");

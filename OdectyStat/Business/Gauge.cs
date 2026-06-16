@@ -27,6 +27,14 @@ namespace OdectyStat1.Business
             if(LastMeasurement != null && newValue == LastMeasurement.CurrentValue)
             {
                 LastMeasurement.LastMeasurementDateTime = datetime;
+                // Hodnota se nezměnila, ale pokud má nové čtení vyšší confidence,
+                // nahradíme uložený snímek tím jistějším (snímek i confidence patří k sobě).
+                if (confidence.HasValue && imagePath != null
+                    && (LastMeasurement.Confidence == null || confidence.Value > LastMeasurement.Confidence.Value))
+                {
+                    LastMeasurement.Confidence = confidence;
+                    LastMeasurement.ImagePath = imagePath;
+                }
                 return;
             }
             var increment = newValue - LastValue;

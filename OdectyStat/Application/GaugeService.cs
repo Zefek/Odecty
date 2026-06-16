@@ -95,7 +95,8 @@ namespace OdectyStat1.Application
         public void GaugeRecognizedFailed(int gaugeId, string imagePath)
         {
             logger.LogInformation("Recognition failed for gauge {gaugeId} with image {imagePath}", gaugeId, imagePath);
-            MoveFile(gaugeId, imagePath, imagePath, false);
+            var dateFolder = File.GetCreationTime(Path.Combine(string.Format(options.Value.Path, gaugeId), imagePath)).ToString("yyyy-MM-dd");
+            MoveFile(gaugeId, imagePath, imagePath, dateFolder, false);
         }
 
         public async Task GaugeRecognizedSucceeded(int gaugeId, string imagePath, decimal value, DateTime dateTime, decimal? confidence)
@@ -164,14 +165,19 @@ namespace OdectyStat1.Application
             var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(imagePath);
             var extension = Path.GetExtension(imagePath);
             var newFileName = fileNameWithoutExtension + "_" + value.ToString().Replace(".", "-") + extension;
+            var sourcePath = Path.Combine(string.Format(options.Value.Path, gaugeId), imagePath);
+            var dateFolder = File.GetCreationTime(sourcePath).ToString("yyyy-MM-dd");
+            // Do DB ukládáme relativní cestu včetně datové složky, aby se snímek dal
+            // dohledat i když hodnota stojí přes hranici dne (jiná složka než datum změny).
+            var relativeImagePath = Path.Combine(dateFolder, newFileName);
             if (valid)
             {
                 logger.LogInformation("Updating gauge {gaugeId} with new value {value}", gaugeId, value);
-                gauge.SetNewValue(value, localDateTime, newFileName, confidence);
+                gauge.SetNewValue(value, localDateTime, relativeImagePath, confidence);
                 await context.SaveChangesAsync();
                 await context.MessageQueue.MQTTPublish(JsonConvert.SerializeObject(new { Value = value.ToString().Replace(",", "."), Confidence = confidence }), MessageQueueRoutingKeys.WatermeterState);
                 await context.MessageQueue.Publish(new { gaugeId, value = gauge.LastValue }, MessageQueueRoutingKeys.Odecty_Gauge_Lastvaluechanged);
-                MoveFile(gaugeId, imagePath, newFileName, true);
+                MoveFile(gaugeId, imagePath, newFileName, dateFolder, true);
             }
             else
             {
@@ -181,16 +187,14 @@ namespace OdectyStat1.Application
                     await context.SaveChangesAsync();
                 }
                 logger.LogWarning("Could not validate recognized value {value} for gauge {gaugeId}. Marking as failed.", value, gaugeId);
-                MoveFile(gaugeId, imagePath, newFileName, false);
+                MoveFile(gaugeId, imagePath, newFileName, dateFolder, false);
             }
         }
 
-        private void MoveFile(int gaugeId, string oldPath, string newPath, bool success)
+        private void MoveFile(int gaugeId, string oldPath, string newPath, string dateFolder, bool success)
         {
             var targetFolder = success ? options.Value.RecognizedSuccessFolder : options.Value.RecognizedFailedFolder;
             targetFolder = string.Format(targetFolder, gaugeId);
-            var dateFolder = File.GetCreationTime(Path.Combine(string.Format(options.Value.Path, gaugeId), oldPath))
-                     .ToString("yyyy-MM-dd");
             targetFolder = Path.Combine(targetFolder, dateFolder);
             logger.LogInformation("Moving file {imagePath} to folder {targetFolder}", oldPath, targetFolder);
             if (!Directory.Exists(targetFolder))
