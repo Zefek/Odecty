@@ -131,6 +131,8 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<DiagDbContext>();
     await db.Database.MigrateAsync();
+    var gaugeDb = scope.ServiceProvider.GetRequiredService<GaugeDbContext>();
+    await gaugeDb.Database.MigrateAsync();
 }
 
 await app.RunAsync();

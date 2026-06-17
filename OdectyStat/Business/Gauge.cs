@@ -22,11 +22,19 @@ namespace OdectyStat1.Business
         public ICollection<GaugeMeasuerementStatistics> MeasurementsStatistics { get; set; } = new List<GaugeMeasuerementStatistics>();
         public int? HomeassistantId { get; internal set; }
 
-        public void SetNewValue(decimal newValue, DateTime datetime, string? imagePath = null)
+        public void SetNewValue(decimal newValue, DateTime datetime, string? imagePath = null, decimal? confidence = null)
         {
             if(LastMeasurement != null && newValue == LastMeasurement.CurrentValue)
             {
                 LastMeasurement.LastMeasurementDateTime = datetime;
+                // Hodnota se nezměnila, ale pokud má nové čtení vyšší confidence,
+                // nahradíme uložený snímek tím jistějším (snímek i confidence patří k sobě).
+                if (confidence.HasValue && imagePath != null
+                    && (LastMeasurement.Confidence == null || confidence.Value > LastMeasurement.Confidence.Value))
+                {
+                    LastMeasurement.Confidence = confidence;
+                    LastMeasurement.ImagePath = imagePath;
+                }
                 return;
             }
             var increment = newValue - LastValue;
@@ -38,7 +46,8 @@ namespace OdectyStat1.Business
                     MeasurementDateTime = datetime,
                     LastMeasurementDateTime = datetime,
                     CurrentValue = newValue,
-                    ImagePath = imagePath
+                    ImagePath = imagePath,
+                    Confidence = confidence
                 });
                 LastValue = newValue;
             }
