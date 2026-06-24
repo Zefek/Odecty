@@ -3,13 +3,18 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using OdectyStat1.Contracts;
 using OdectyStat1.Dto;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace OdectyStat1.DataLayer;
 
 internal class GaugeQueryService : IGaugeQueryService
 {
-    private static readonly FileExtensionContentTypeProvider ContentTypeProvider = new();
+    // Pevné WB gainy (zelený nádech z locked-WB kamery je stabilní)
+    private const double gR = 1.31, gG = 1.00, gB = 1.49;
+    private readonly byte[] LutR = BuildLut(gR), LutG = BuildLut(gG), LutB = BuildLut(gB);
 
+    private static readonly FileExtensionContentTypeProvider ContentTypeProvider = new();
     private readonly GaugeDbContext context;
     private readonly IOptions<GaugeImageLocation> imageLocation;
 
@@ -68,9 +73,11 @@ internal class GaugeQueryService : IGaugeQueryService
             contentType = "application/octet-stream";
         }
 
+        var buffer = await File.ReadAllBytesAsync(path, cancellationToken);
+        var result = CorrectWb(buffer);
         return new GaugePhoto
         {
-            Content = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read),
+            Content = new MemoryStream(result),
             ContentType = contentType,
             FileName = Path.GetFileName(path)
         };
@@ -100,5 +107,32 @@ internal class GaugeQueryService : IGaugeQueryService
         }
 
         return null;
+    }
+
+    private static byte[] BuildLut(double g)
+    {
+        var lut = new byte[256];
+        for (int i = 0; i < 256; i++) lut[i] = (byte)Math.Min(255, Math.Round(i * g));
+        return lut;
+    }
+
+    private byte[] CorrectWb(byte[] jpeg)
+    {
+        using var img = Image.Load<Rgb24>(jpeg);
+        img.ProcessPixelRows(acc => {
+            for (int y = 0; y < acc.Height; y++)
+            {
+                var row = acc.GetRowSpan(y);
+                for (int x = 0; x < row.Length; x++)
+                {
+                    row[x].R = LutR[row[x].R];
+                    row[x].G = LutG[row[x].G];
+                    row[x].B = LutB[row[x].B];
+                }
+            }
+        });
+        using var ms = new MemoryStream();
+        img.SaveAsJpeg(ms);
+        return ms.ToArray();
     }
 }
