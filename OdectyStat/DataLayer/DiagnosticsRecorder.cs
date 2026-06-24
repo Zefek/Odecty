@@ -23,4 +23,16 @@ internal class DiagnosticsRecorder : IDiagnosticsRecorder
         context.TransferDiagnostics.Add(diagnostic);
         await context.SaveChangesAsync(ct);
     }
+
+    public async Task RecordDeviceAsync(DeviceDiagnostic diagnostic, CancellationToken ct = default)
+    {
+        context.DeviceDiagnostics.Add(diagnostic);
+        await context.SaveChangesAsync(ct);
+    }
+
+    public async Task RecordConfigAsync(CameraConfig config, CancellationToken ct = default)
+    {
+        context.CameraConfigs.Add(config);
+        await context.SaveChangesAsync(ct);
+    }
 }

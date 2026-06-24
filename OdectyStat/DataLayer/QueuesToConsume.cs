@@ -8,4 +8,6 @@ internal static class QueuesToConsume
     internal const string LSSensorDiag = "LSSensorDiag";
     internal const string GarageDiag = "GarageDiag";
     internal const string GaugeTransferDiag = "GaugeTransfer";
+    internal const string GaugeDeviceDiag = "GaugeDiag";
+    internal const string GaugeConfig = "GaugeConfig";
 }

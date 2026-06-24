@@ -75,6 +75,8 @@ builder.Services.AddSingleton<IRabbitMQConsumer, MQClient>();
 builder.Services.AddSingleton<IRabbitMQConsumer, RecognizedSuccess>();
 builder.Services.AddSingleton<IRabbitMQConsumer, RecognizedFailed>();
 builder.Services.AddSingleton<IRabbitMQConsumer, TransferDiag>();
+builder.Services.AddSingleton<IRabbitMQConsumer, DeviceDiag>();
+builder.Services.AddSingleton<IRabbitMQConsumer, ConfigDiag>();
 builder.Services.AddHostedService<BinaryConsumerBackgroundService>();
 builder.Services.AddSingleton<IBinaryMessageHandler, HeaterDiagHandler>();
 builder.Services.AddSingleton<IBinaryMessageHandler, LSSensorDiagHandler>();
