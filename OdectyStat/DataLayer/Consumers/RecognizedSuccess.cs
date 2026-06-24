@@ -40,11 +40,13 @@ namespace OdectyStat1.DataLayer.Consumers
                     {
                         using var scope = serviceProvider.CreateScope();
                         var service = scope.ServiceProvider.GetService<IGaugeService>();
-                        // Číslo čteme přímo z JSON tokenu (culture-invariant). Přes .ToString()
-                        // by se desetinná čárka aktuální culture zaměnila za oddělovač tisíců.
                         JToken? confidenceToken = message.confidence;
                         decimal? confidence = confidenceToken?.Value<decimal?>();
-                        await service!.GaugeRecognizedSucceeded(int.Parse(message.gaugeId.ToString()), message.file.ToString(), decimal.Parse(message.state.ToString(), CultureInfo.InvariantCulture), DateTime.Parse(message.datetime.ToString()), confidence);
+                        JToken? digitProbsToken = message.digit_probs;
+                        decimal[][]? digitProbs = digitProbsToken?.ToObject<decimal[][]>();
+                        JToken? correlationToken = message.correlationId;
+                        decimal correlationId = correlationToken == null ? 0 : decimal.Parse(correlationToken.ToString(), CultureInfo.InvariantCulture);
+                        await service!.GaugeRecognizedSucceeded(int.Parse(message.gaugeId.ToString()), message.file.ToString(), decimal.Parse(message.state.ToString(), CultureInfo.InvariantCulture), DateTime.Parse(message.datetime.ToString()), confidence, correlationId, digitProbs);
                         await AcknowledgeMessage(e.DeliveryTag);
                     }
                     else
@@ -64,7 +66,6 @@ namespace OdectyStat1.DataLayer.Consumers
             }
             else
             {
-                //redeliver message
                 await RejectMessage(e.DeliveryTag, true);
             }
         }

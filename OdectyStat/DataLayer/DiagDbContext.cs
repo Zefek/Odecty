@@ -12,6 +12,8 @@ public class DiagDbContext : DbContext
     public DbSet<HeaterDiagnostic> HeaterDiagnostics { get; set; }
     public DbSet<LSSensorDiagnostic> LSSensorDiagnostics { get; set; }
     public DbSet<GarageDiagnostic> GarageDiagnostics { get; set; }
+    public DbSet<FileDiagnostic> FileDiagnostics { get; set; }
+    public DbSet<TransferDiagnostic> TransferDiagnostics { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -72,6 +74,47 @@ public class DiagDbContext : DbContext
             entity.Property(e => e.Rssi).HasColumnName("rssi");
 
             entity.HasIndex(e => e.Timestamp, "ix_garage_diagnostics_timestamp");
+        });
+
+        modelBuilder.Entity<FileDiagnostic>(entity =>
+        {
+            entity.ToTable("file_diagnostics");
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.CorrelationId).HasColumnName("correlation_id").HasColumnType("numeric(20,0)");
+            entity.Property(e => e.GaugeId).HasColumnName("gauge_id");
+            entity.Property(e => e.Timestamp).HasColumnName("timestamp");
+            entity.Property(e => e.FilePath).HasColumnName("file_path");
+            entity.Property(e => e.Success).HasColumnName("success");
+            entity.Property(e => e.RecognizedValue).HasColumnName("recognized_value");
+            entity.Property(e => e.CorrectedValue).HasColumnName("corrected_value");
+            entity.Property(e => e.Confidence).HasColumnName("confidence");
+
+            entity.HasIndex(e => e.CorrelationId, "ix_file_diagnostics_correlation_id");
+            entity.HasIndex(e => e.Timestamp, "ix_file_diagnostics_timestamp");
+        });
+
+        modelBuilder.Entity<TransferDiagnostic>(entity =>
+        {
+            entity.ToTable("transfer_diagnostics");
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.CorrelationId).HasColumnName("correlation_id").HasColumnType("numeric(20,0)");
+            entity.Property(e => e.GaugeId).HasColumnName("gauge_id");
+            entity.Property(e => e.Timestamp).HasColumnName("timestamp");
+            entity.Property(e => e.SchemaVer).HasColumnName("schema_ver");
+            entity.Property(e => e.ImgSize).HasColumnName("img_size");
+            entity.Property(e => e.BytesSent).HasColumnName("bytes_sent");
+            entity.Property(e => e.DurationMs).HasColumnName("duration_ms");
+            entity.Property(e => e.TryCount).HasColumnName("try_count");
+            entity.Property(e => e.Success).HasColumnName("success");
+            entity.Property(e => e.HttpCode).HasColumnName("http_code");
+            entity.Property(e => e.Rssi).HasColumnName("rssi");
+
+            entity.HasIndex(e => e.CorrelationId, "ix_transfer_diagnostics_correlation_id");
+            entity.HasIndex(e => e.Timestamp, "ix_transfer_diagnostics_timestamp");
         });
     }
 }
