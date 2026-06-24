@@ -43,7 +43,7 @@ internal class ConfigDiag : RabbitMQConsumer
             }
 
             int gaugeId = int.Parse(message.GaugeId.ToString());
-            DateTime timestamp = DateTime.Parse(message.Datetime.ToString()).ToUniversalTime();
+            DateTime timestamp = ((DateTimeOffset)message.Datetime).UtcDateTime;
             byte[] blob = Convert.FromBase64String((string)message.Data.ToString());
             if (blob.Length != ExpectedSize)
             {
