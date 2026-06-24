@@ -3,8 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using OdectyStat1.Contracts;
 using OdectyStat1.Dto;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using SkiaSharp;
+using System.Drawing;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace OdectyStat1.DataLayer;
 
@@ -118,21 +119,16 @@ internal class GaugeQueryService : IGaugeQueryService
 
     private byte[] CorrectWb(byte[] jpeg)
     {
-        using var img = Image.Load<Rgb24>(jpeg);
-        img.ProcessPixelRows(acc => {
-            for (int y = 0; y < acc.Height; y++)
-            {
-                var row = acc.GetRowSpan(y);
-                for (int x = 0; x < row.Length; x++)
-                {
-                    row[x].R = LutR[row[x].R];
-                    row[x].G = LutG[row[x].G];
-                    row[x].B = LutB[row[x].B];
-                }
-            }
-        });
-        using var ms = new MemoryStream();
-        img.SaveAsJpeg(ms);
-        return ms.ToArray();
+        using var bmp = SKBitmap.Decode(jpeg);
+        var px = bmp.Pixels;                       // SKColor[]
+        for (int i = 0; i < px.Length; i++)
+        {
+            var c = px[i];
+            px[i] = new SKColor(LutR[c.Red], LutG[c.Green], LutB[c.Blue], c.Alpha);
+        }
+        bmp.Pixels = px;
+        using var img = SKImage.FromBitmap(bmp);
+        using var data = img.Encode(SKEncodedImageFormat.Jpeg, 90);
+        return data.ToArray();
     }
 }
