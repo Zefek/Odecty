@@ -1,0 +1,1894 @@
+{
+  "title": "Gauge Camera (WaterSensor)",
+  "uid": "gauge-camera-diagnostics",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "tags": [
+    "diagnostics",
+    "iot",
+    "watersensor",
+    "gauge"
+  ],
+  "timezone": "browser",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "gauge",
+        "label": "Gauge",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "grafana-postgresql-heater-diag"
+        },
+        "query": "SELECT DISTINCT gauge_id FROM (SELECT gauge_id FROM device_diagnostics UNION ALL SELECT gauge_id FROM file_diagnostics UNION ALL SELECT gauge_id FROM transfer_diagnostics UNION ALL SELECT gauge_id FROM camera_config UNION ALL SELECT 0) q ORDER BY gauge_id",
+        "refresh": 1,
+        "hide": 0,
+        "multi": false,
+        "includeAll": false,
+        "regex": "",
+        "sort": 3
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Zařízení – stav (ESP32-CAM)",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Naposledy viděno (× interval)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1.5
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT EXTRACT(EPOCH FROM (now() - max(timestamp))) / 60.0 / 5.0 AS intervals FROM device_diagnostics WHERE gauge_id::text = '$gauge'"
+        }
+      ],
+      "description": "Kolik očekávaných intervalů (5 min) uběhlo od posledního záznamu. Žlutá 1.5×, červená 3× (offline)."
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Uptime",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, uptime_seconds AS value FROM device_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Volná halda",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 51200
+              },
+              {
+                "color": "green",
+                "value": 102400
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, free_heap_kb * 1024 AS value FROM device_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Loop max",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2000
+              },
+              {
+                "color": "orange",
+                "value": 5000
+              },
+              {
+                "color": "red",
+                "value": 10000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "max"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, loop_max_ms AS value FROM device_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ],
+      "description": "Nejdelší iterace smyčky. WDT se na ESP32 pet-uje i uvnitř operací, takže vysoký loop_max neznamená bezprostřední reset – ber to jako indikátor zaseknutí, ne přímou hranici WDT."
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Rebo/window",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT count(*) AS reboots FROM (SELECT uptime_seconds, LAG(uptime_seconds) OVER (ORDER BY timestamp) AS prev FROM device_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp)) t WHERE prev IS NOT NULL AND uptime_seconds < prev"
+        }
+      ],
+      "description": "Počet poklesů uptime (= rebootů) v okně."
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Aktuální RSSI",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dBm",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": -85
+              },
+              {
+                "color": "yellow",
+                "value": -75
+              },
+              {
+                "color": "green",
+                "value": -65
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, rssi AS value FROM device_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Halda: volná vs. min. volná (únik paměti)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 51200
+              },
+              {
+                "color": "green",
+                "value": 102400
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, free_heap_kb * 1024 AS \"Volná halda\", min_free_heap_kb * 1024 AS \"Min. volná\" FROM device_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ],
+      "description": "Klesající min. volná halda v čase = únik paměti."
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Max. souvislý blok (fragmentace, TLS)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, max_alloc_kb * 1024 AS \"Max alloc\" FROM device_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ],
+      "description": "Největší souvislý blok. Pokud klesá pod velikost TLS bufferu, hrozí selhání handshake."
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Loop max v čase",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2000
+              },
+              {
+                "color": "orange",
+                "value": 5000
+              },
+              {
+                "color": "red",
+                "value": 10000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, loop_max_ms AS \"Loop max\" FROM device_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ],
+      "description": "Nejdelší iterace smyčky. WDT se na ESP32 pet-uje i uvnitř operací, takže vysoký loop_max neznamená bezprostřední reset – ber to jako indikátor zaseknutí, ne přímou hranici WDT."
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Uptime (poklesy = reboot)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, uptime_seconds AS \"Uptime\" FROM device_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "RSSI v čase",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 0,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dBm",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": -85
+              },
+              {
+                "color": "yellow",
+                "value": -75
+              },
+              {
+                "color": "green",
+                "value": -65
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, rssi AS \"RSSI\" FROM device_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "WiFi reconnects (čítač, nuluje se rebootem)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, wifi_reconnects AS \"WiFi reconnects\" FROM device_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Chybové čítače (nulují se rebootem)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 29
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, send_failures AS \"Send failures\", tls_errors AS \"TLS errors\", ota_failures AS \"OTA failures\", camera_errors AS \"Camera errors\" FROM device_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Pořízené snímky (capture_count)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 29
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, capture_count AS \"Capture count\" FROM device_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "row",
+      "title": "Přenosy snímků (transfer)",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 37
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 17,
+      "type": "stat",
+      "title": "Úspěšnost přenosů",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 38
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 90
+              },
+              {
+                "color": "green",
+                "value": 99
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT 100.0 * sum(CASE WHEN success THEN 1 ELSE 0 END) / NULLIF(count(*), 0) AS pct FROM transfer_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp)"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "type": "stat",
+      "title": "Prům. doba přenosu",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 38
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT avg(duration_ms) AS ms FROM transfer_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp)"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "type": "stat",
+      "title": "Prům. rychlost",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 38
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "KBs",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT avg(bytes_sent / 1024.0 / NULLIF(duration_ms, 0) * 1000.0) AS kbps FROM transfer_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) AND duration_ms > 0"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "stat",
+      "title": "Neúspěšné přenosy",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 38
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT count(*) AS cnt FROM transfer_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) AND NOT success"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Doba přenosu v čase",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 42
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, duration_ms AS \"Doba (ms)\" FROM transfer_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Rychlost přenosu v čase",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 42
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "KBs",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, bytes_sent / 1024.0 / NULLIF(duration_ms, 0) * 1000.0 AS \"kB/s\" FROM transfer_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) AND duration_ms > 0 ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Velikost snímku vs. odeslané bajty",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 50
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, img_size AS \"JPEG velikost\", bytes_sent AS \"Odesláno\" FROM transfer_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "table",
+      "title": "HTTP kódy přenosů",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 50
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT http_code AS \"HTTP kód\", count(*) AS \"Počet\", max(timestamp) AS \"Naposledy\" FROM transfer_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) GROUP BY http_code ORDER BY count(*) DESC"
+        }
+      ],
+      "description": "-1 = žádný HTTP kód (spojení selhalo dřív)."
+    },
+    {
+      "id": 25,
+      "type": "row",
+      "title": "Rozpoznávání hodnot",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 58
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 26,
+      "type": "stat",
+      "title": "Úspěšnost rozpoznání",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 59
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 90
+              },
+              {
+                "color": "green",
+                "value": 99
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT 100.0 * sum(CASE WHEN success THEN 1 ELSE 0 END) / NULLIF(count(*), 0) AS pct FROM file_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp)"
+        }
+      ],
+      "description": "Úspěšnost CNN rozpoznání (success vs fail). Neříká, že je číslo správně – to řeší heuristika."
+    },
+    {
+      "id": 27,
+      "type": "stat",
+      "title": "Neúspěšná rozpoznání",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 59
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT count(*) AS cnt FROM file_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) AND NOT success"
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "type": "stat",
+      "title": "Heuristické opravy",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 59
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT count(*) AS cnt FROM file_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) AND recognized_value IS DISTINCT FROM corrected_value AND success"
+        }
+      ],
+      "description": "Kolikrát heuristika přepsala hodnotu z CNN (recognized_value ≠ corrected_value)."
+    },
+    {
+      "id": 29,
+      "type": "stat",
+      "title": "Prům. confidence",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 59
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.8
+              },
+              {
+                "color": "green",
+                "value": 0.95
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT avg(confidence) AS conf FROM file_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) AND confidence IS NOT NULL"
+        }
+      ],
+      "description": "Skutečný confidence (po případném přepočtu přes digit_probs)."
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Confidence v čase",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 63
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.8
+              },
+              {
+                "color": "green",
+                "value": 0.95
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, confidence AS \"Confidence\" FROM file_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) AND confidence IS NOT NULL ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Rozpoznání: úspěch / oprava (počet/h)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 63
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 20
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('hour', timestamp) AS time, sum(CASE WHEN success THEN 1 ELSE 0 END) AS \"Úspěch\", sum(CASE WHEN NOT success THEN 1 ELSE 0 END) AS \"Fail\", sum(CASE WHEN success AND recognized_value IS DISTINCT FROM corrected_value THEN 1 ELSE 0 END) AS \"Opraveno\" FROM file_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "table",
+      "title": "Poslední rozpoznání",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 71
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT timestamp AS \"Čas\", file_path AS \"Soubor\", success AS \"Success\", recognized_value AS \"CNN\", corrected_value AS \"Po opravě\", confidence AS \"Confidence\" FROM file_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) ORDER BY timestamp DESC LIMIT 100"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "type": "row",
+      "title": "Reset & konfigurace kamery",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 79
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 34,
+      "type": "table",
+      "title": "Důvody resetů (esp_reset_reason_t)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 80
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "UNKNOWN",
+                  "index": 0
+                },
+                "1": {
+                  "text": "POWERON",
+                  "index": 1
+                },
+                "2": {
+                  "text": "EXT",
+                  "index": 2
+                },
+                "3": {
+                  "text": "SW",
+                  "index": 3
+                },
+                "4": {
+                  "text": "PANIC",
+                  "index": 4
+                },
+                "5": {
+                  "text": "INT_WDT",
+                  "index": 5
+                },
+                "6": {
+                  "text": "TASK_WDT",
+                  "index": 6
+                },
+                "7": {
+                  "text": "WDT",
+                  "index": 7
+                },
+                "8": {
+                  "text": "DEEPSLEEP",
+                  "index": 8
+                },
+                "9": {
+                  "text": "BROWNOUT",
+                  "index": 9
+                },
+                "10": {
+                  "text": "SDIO",
+                  "index": 10
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reason"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "UNKNOWN",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "POWERON",
+                        "index": 1
+                      },
+                      "2": {
+                        "text": "EXT",
+                        "index": 2
+                      },
+                      "3": {
+                        "text": "SW",
+                        "index": 3
+                      },
+                      "4": {
+                        "text": "PANIC",
+                        "index": 4
+                      },
+                      "5": {
+                        "text": "INT_WDT",
+                        "index": 5
+                      },
+                      "6": {
+                        "text": "TASK_WDT",
+                        "index": 6
+                      },
+                      "7": {
+                        "text": "WDT",
+                        "index": 7
+                      },
+                      "8": {
+                        "text": "DEEPSLEEP",
+                        "index": 8
+                      },
+                      "9": {
+                        "text": "BROWNOUT",
+                        "index": 9
+                      },
+                      "10": {
+                        "text": "SDIO",
+                        "index": 10
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT reset_reason AS \"Reason\", count(*) AS \"Počet\", max(timestamp) AS \"Naposledy\" FROM device_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) GROUP BY reset_reason ORDER BY count(*) DESC"
+        }
+      ],
+      "description": "PANIC, *_WDT a BROWNOUT jsou ty kritické (pády / slabé napájení)."
+    },
+    {
+      "id": 35,
+      "type": "stat",
+      "title": "Aktuální cfg_hash",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 80
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, cfg_hash AS value FROM camera_config WHERE gauge_id::text = '$gauge' ORDER BY timestamp DESC LIMIT 1"
+        }
+      ],
+      "description": "CRC8 aktuální konfigurace. Páruje se s device_diagnostics.cfg_hash."
+    },
+    {
+      "id": 36,
+      "type": "stat",
+      "title": "FW verze",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 80
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, fw_version AS value FROM device_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp) ORDER BY timestamp DESC LIMIT 1"
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "type": "table",
+      "title": "Historie konfigurace (změny cfg_hash)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 84
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT timestamp AS \"Čas\", cfg_hash AS \"cfg_hash\", fw_version AS \"FW\" FROM camera_config WHERE gauge_id::text = '$gauge' ORDER BY timestamp DESC LIMIT 50"
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "type": "table",
+      "title": "Aktuální konfigurace kamery (OV2640 readback)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 12,
+        "x": 0,
+        "y": 88
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ord"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "WITH c AS (SELECT * FROM camera_config WHERE gauge_id::text = '$gauge' ORDER BY timestamp DESC LIMIT 1)\nSELECT 1 AS ord, 'Framesize' AS \"Nastavení\", CASE framesize WHEN 11 THEN 'SVGA (11)' ELSE framesize::text END AS \"Hodnota\" FROM c\nUNION ALL SELECT 2, 'Quality (0-63, nižší=lepší)', quality::text FROM c\nUNION ALL SELECT 3, 'AEC value (expozice)', aec_value::text FROM c\nUNION ALL SELECT 4, 'Exposure ctrl (AEC)', CASE exposure_ctrl WHEN 1 THEN 'on' ELSE 'off' END FROM c\nUNION ALL SELECT 5, 'Gain ctrl (AGC)', CASE gain_ctrl WHEN 1 THEN 'on' ELSE 'off' END FROM c\nUNION ALL SELECT 6, 'AGC gain', agc_gain::text FROM c\nUNION ALL SELECT 7, 'AE level', ae_level::text FROM c\nUNION ALL SELECT 8, 'Jas (brightness)', brightness::text FROM c\nUNION ALL SELECT 9, 'Kontrast', contrast::text FROM c\nUNION ALL SELECT 10, 'Sytost (saturation)', saturation::text FROM c\nUNION ALL SELECT 11, 'AWB (whitebal)', CASE whitebal WHEN 1 THEN 'on' ELSE 'off' END FROM c\nUNION ALL SELECT 12, 'AWB gain', CASE awb_gain WHEN 1 THEN 'on' ELSE 'off' END FROM c\nUNION ALL SELECT 13, 'WB mode', CASE wb_mode WHEN 0 THEN 'auto' WHEN 1 THEN 'sunny' WHEN 2 THEN 'cloudy' WHEN 3 THEN 'office' WHEN 4 THEN 'home' ELSE wb_mode::text END FROM c\nUNION ALL SELECT 14, 'Special effect', special_effect::text FROM c\nUNION ALL SELECT 15, 'H-mirror', CASE hmirror WHEN 1 THEN 'on' ELSE 'off' END FROM c\nUNION ALL SELECT 16, 'V-flip', CASE vflip WHEN 1 THEN 'on' ELSE 'off' END FROM c\nUNION ALL SELECT 17, 'AEC2 (noční DSP)', CASE aec2 WHEN 1 THEN 'on' ELSE 'off' END FROM c\nUNION ALL SELECT 18, 'Gainceiling', CASE gainceiling WHEN 0 THEN '2x' WHEN 1 THEN '4x' WHEN 2 THEN '8x' WHEN 3 THEN '16x' WHEN 4 THEN '32x' WHEN 5 THEN '64x' WHEN 6 THEN '128x' ELSE gainceiling::text END FROM c\nUNION ALL SELECT 19, 'DCW (downsize/crop)', CASE dcw WHEN 1 THEN 'on' ELSE 'off' END FROM c\nUNION ALL SELECT 20, 'BPC (vadné pixely)', CASE bpc WHEN 1 THEN 'on' ELSE 'off' END FROM c\nUNION ALL SELECT 21, 'WPC (bílé pixely)', CASE wpc WHEN 1 THEN 'on' ELSE 'off' END FROM c\nUNION ALL SELECT 22, 'Raw GMA (gamma)', CASE raw_gma WHEN 1 THEN 'on' ELSE 'off' END FROM c\nUNION ALL SELECT 23, 'LENC (vinětace)', CASE lenc WHEN 1 THEN 'on' ELSE 'off' END FROM c\nORDER BY ord"
+        }
+      ],
+      "description": "Skutečný stav senzoru (sensor_t.status), ne to, co firmware chtěl nastavit."
+    }
+  ]
+}
