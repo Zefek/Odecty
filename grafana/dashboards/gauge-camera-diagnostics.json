@@ -1250,7 +1250,7 @@
           "rawSql": "SELECT 100.0 * sum(CASE WHEN success THEN 1 ELSE 0 END) / NULLIF(count(*), 0) AS pct FROM file_diagnostics WHERE gauge_id::text = '$gauge' AND $__timeFilter(timestamp)"
         }
       ],
-      "description": "Úspěšnost CNN rozpoznání (success vs fail). Neříká, že je číslo správně – to řeší heuristika."
+      "description": "Podíl přijatých hodnot (success = CNN rozpoznal A hodnota prošla validací/heuristikou). Fail = nerozpoznáno (recognized_value NULL) i rozpoznáno, ale zamítnuto heuristikou."
     },
     {
       "id": 27,

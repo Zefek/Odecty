@@ -201,7 +201,7 @@ namespace OdectyStat1.Application
                 logger.LogWarning("Could not validate recognized value {value} for gauge {gaugeId}. Marking as failed.", value, gaugeId);
                 destPath = MoveFile(gaugeId, imagePath, newFileName, dateFolder, false);
             }
-            await RecordFileDiagnostic(correlationId, gaugeId, destPath, success: true, recognizedValue: recognizedValue, correctedValue: value, confidence: confidence);
+            await RecordFileDiagnostic(correlationId, gaugeId, destPath, success: valid, recognizedValue: recognizedValue, correctedValue: value, confidence: confidence);
         }
 
         private decimal? RecomputeConfidence(decimal value, decimal[][]? digitProbs)
