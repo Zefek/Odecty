@@ -168,8 +168,16 @@ namespace OdectyStat1.Application
             }
             else if (gauge.LastValue > value)
             {
-                logger.LogWarning("Recognized value {value} is less than last value {lastValue} for gauge {gaugeId}. Marking as failed.", value, gauge.LastValue, gaugeId);
-                valid = false;
+                if (gauge.LastValue - value <= 0.0001m)
+                {
+                    value = gauge.LastValue;
+                    valid = true;
+                }
+                else
+                {
+                    logger.LogWarning("Recognized value {value} is less than last value {lastValue} for gauge {gaugeId}. Marking as failed.", value, gauge.LastValue, gaugeId);
+                    valid = false;
+                }
             }
             else
             {
@@ -232,7 +240,6 @@ namespace OdectyStat1.Application
                 var p = (double)row[digit];
                 if (p <= 0)
                 {
-                    // Nulová pravděpodobnost → geometrický průměr je 0 (číslice, kterou CNN vůbec nezvažovala).
                     return 0m;
                 }
                 logSum += Math.Log(p);
