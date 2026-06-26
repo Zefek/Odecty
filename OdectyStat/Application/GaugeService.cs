@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using OdectyStat1.Business;
 using OdectyStat1.Contracts;
@@ -13,7 +12,7 @@ namespace OdectyStat1.Application
         private readonly IOptions<GaugeImageLocation> options;
         private readonly ILogger<GaugeService> logger;
         private readonly IDiagnosticsRecorder diagnostics;
-        
+
         private const int DigitPositions = 5;
 
         public GaugeService(IGaugeContext context, IOptions<GaugeImageLocation> options, ILogger<GaugeService> logger, IDiagnosticsRecorder diagnostics)
@@ -105,6 +104,20 @@ namespace OdectyStat1.Application
             await RecordFileDiagnostic(correlationId, gaugeId, destPath, success: false, recognizedValue: null, correctedValue: null, confidence: null);
         }
 
+        private decimal GetDiff(decimal candidate, decimal prevValue, out decimal corrected)
+        {
+            if (candidate < prevValue)
+            {
+                if (prevValue - candidate <= 0.0001m)
+                {
+                    corrected = prevValue;
+                    return corrected - prevValue;
+                }
+            }
+            corrected = candidate;
+            return candidate - prevValue;
+        }
+
         public async Task GaugeRecognizedSucceeded(int gaugeId, string imagePath, decimal value, DateTime dateTime, decimal? confidence, decimal correlationId = 0, decimal[][]? digitProbs = null)
         {
             logger.LogInformation("Recognition succeeded for gauge {gaugeId} with image {imagePath} and value {value}", gaugeId, imagePath, value);
@@ -117,6 +130,7 @@ namespace OdectyStat1.Application
             }
             var localDateTime = dateTime.ToLocalTime();
             bool valid = false;
+            var initialDiff = GetDiff(value, gauge.LastValue, out var initialCorrected);
             if (gauge.LastMeasurement != null)
             {
                 var prevValue = gauge.LastMeasurement.CurrentValue;
@@ -130,13 +144,15 @@ namespace OdectyStat1.Application
                     if (timeDiff.TotalHours > 0 && gauge.MaxValuePerHour.HasValue)
                     {
                         var maxAllowedIncrement = gauge.MaxValuePerHour.Value * (decimal)timeDiff.TotalHours;
-                        if (value - prevValue <= maxAllowedIncrement && value - prevValue >= 0)
+                        var diff = GetDiff(value, prevValue, out var corrected);
+                        if (diff <= maxAllowedIncrement && diff >= 0)
                         {
+                            value = corrected;
                             valid = true;
                         }
                         else
                         {
-                            logger.LogWarning("Recognized value {value} exceeds maximum allowed increment {maxAllowedIncrement} for gauge {gaugeId}. Marking as failed.", value, maxAllowedIncrement, gaugeId);
+                            logger.LogWarning("Recognized value {value} exceeds maximum allowed increment {maxAllowedIncrement} for gauge {gaugeId}.", value, maxAllowedIncrement, gaugeId);
                             valid = false;
 
                             decimal prevInt = Math.Truncate(prevValue);
@@ -147,11 +163,11 @@ namespace OdectyStat1.Application
                             for (int inc = 0; inc <= 2; inc++)
                             {
                                 decimal candidate = (prevInt + inc) + newDec;
-                                decimal diff = candidate - prevValue;
+                                var diffT = GetDiff(candidate, prevValue, out var correctedT);
 
-                                if (diff >= 0 && diff <= maxAllowedIncrement)
+                                if (diffT >= 0 && diffT <= maxAllowedIncrement)
                                 {
-                                    value = decimal.Round(candidate, 4);
+                                    value = decimal.Round(correctedT, 4);
                                     valid = true;
                                     var recomputed = RecomputeConfidence(value, digitProbs);
                                     if (recomputed.HasValue)
@@ -166,21 +182,14 @@ namespace OdectyStat1.Application
                     }
                 }
             }
-            else if (gauge.LastValue > value)
+            else if (initialDiff < 0)
             {
-                if (gauge.LastValue - value <= 0.0001m)
-                {
-                    value = gauge.LastValue;
-                    valid = true;
-                }
-                else
-                {
-                    logger.LogWarning("Recognized value {value} is less than last value {lastValue} for gauge {gaugeId}. Marking as failed.", value, gauge.LastValue, gaugeId);
-                    valid = false;
-                }
+                logger.LogWarning("Recognized value {value} is less than last value {lastValue} for gauge {gaugeId}. Marking as failed.", value, gauge.LastValue, gaugeId);
+                valid = false;
             }
             else
             {
+                value = initialCorrected;
                 valid = true;
             }
             var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(imagePath);
