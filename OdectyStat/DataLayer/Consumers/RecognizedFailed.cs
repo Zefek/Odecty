@@ -5,8 +5,10 @@ using Microsoft.Extensions.Options;
 using OdectyStat1.Application;
 using OdectyStat1.DataLayer;
 using OdectyStat1.Dto;
+using Newtonsoft.Json.Linq;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using System.Globalization;
 using System.Security.Policy;
 using System.Text;
 
@@ -41,7 +43,9 @@ namespace OdectyStat1.DataLayer.Consumers
                     {
                         using var scope = serviceProvider.CreateScope();
                         var service = scope.ServiceProvider.GetService<IGaugeService>();
-                        service!.GaugeRecognizedFailed(int.Parse(message.gaugeId.ToString()), message.file.ToString());
+                        JToken? correlationToken = message.correlationId;
+                        decimal correlationId = correlationToken == null ? 0 : decimal.Parse(correlationToken.ToString(), CultureInfo.InvariantCulture);
+                        await service!.GaugeRecognizedFailed(int.Parse(message.gaugeId.ToString()), message.file.ToString(), correlationId);
                         await AcknowledgeMessage(e.DeliveryTag);
                     }
                     else
@@ -61,7 +65,6 @@ namespace OdectyStat1.DataLayer.Consumers
             }
             else
             {
-                //redeliver message
                 await RejectMessage(e.DeliveryTag, true);
             }
         }

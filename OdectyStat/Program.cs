@@ -49,16 +49,19 @@ builder.Services.AddOpenTelemetry()
 
 builder.Services.Configure<OdectySettings>(builder.Configuration.GetSection("OdectySettings"));
 builder.Services.Configure<GaugeImageLocation>(builder.Configuration.GetSection("GaugeImageLocation"));
+builder.Services.Configure<FirmwareLocation>(builder.Configuration.GetSection("FirmwareLocation"));
 builder.Services.AddSingleton<RabbitMQProvider>();
 builder.Services.AddScoped<IGaugeContext, GaugeContext>();
 builder.Services.AddScoped<IGaugeRepository, GaugeRepository>();
 builder.Services.AddScoped<IMeasurementDayRepository, MeasurementDayRepository>();
 builder.Services.AddScoped<IGaugeService, GaugeService>();
+builder.Services.AddScoped<IDiagnosticsRecorder, DiagnosticsRecorder>();
 builder.Services.AddScoped<IMessageQueue, MessageQueue>();
 builder.Services.AddScoped<IMeasurementRepository, MeasurementRepository>();
 builder.Services.AddScoped<IMeasurementStatisticsRepository, MeasurementStatisticsRepository>();
 builder.Services.AddScoped<IHomeAssistantStatisticsRepository, HomeAssistantStatisticsRepository>();
 builder.Services.AddScoped<IGaugeQueryService, GaugeQueryService>();
+builder.Services.AddScoped<IFirmwareService, FirmwareService>();
 
 builder.Services.AddDbContext<GaugeDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("Odecty")));
@@ -71,6 +74,9 @@ builder.Services.AddHostedService<ConsumerBackgroundService>();
 builder.Services.AddSingleton<IRabbitMQConsumer, MQClient>();
 builder.Services.AddSingleton<IRabbitMQConsumer, RecognizedSuccess>();
 builder.Services.AddSingleton<IRabbitMQConsumer, RecognizedFailed>();
+builder.Services.AddSingleton<IRabbitMQConsumer, TransferDiag>();
+builder.Services.AddSingleton<IRabbitMQConsumer, DeviceDiag>();
+builder.Services.AddSingleton<IRabbitMQConsumer, ConfigDiag>();
 builder.Services.AddHostedService<BinaryConsumerBackgroundService>();
 builder.Services.AddSingleton<IBinaryMessageHandler, HeaterDiagHandler>();
 builder.Services.AddSingleton<IBinaryMessageHandler, LSSensorDiagHandler>();
