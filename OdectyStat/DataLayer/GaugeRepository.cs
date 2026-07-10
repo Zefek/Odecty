@@ -13,10 +13,13 @@ namespace OdectyStat1.DataLayer
             this.gaugeContext = gaugeContext;
         }
 
-        public async Task<Gauge> GetGauge(int id)
+        public async Task<Gauge?> GetGauge(int id)
         {
             var gauge = await gaugeContext.Gauge.FindAsync(id);
-            gauge.LastMeasurement = await gaugeContext.GaugeMeasurement.Where(k => k.GaugeId == id).OrderByDescending(k => k.MeasurementDateTime).FirstOrDefaultAsync();
+            if (gauge != null)
+            {
+                gauge.LastMeasurement = await gaugeContext.GaugeMeasurement.Where(k => k.GaugeId == id).OrderByDescending(k => k.MeasurementDateTime).FirstOrDefaultAsync();
+            }
             return gauge;
         }
     }

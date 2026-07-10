@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Linq;
 using OdectyStat1.Application;
 using OdectyStat1.DataLayer;
 using OdectyStat1.Dto;
@@ -24,7 +25,7 @@ namespace OdectyStat1.DataLayer.Consumers
             this.logger = logger;
         }
 
-        protected override async void ConsumerReceived(object? sender, BasicDeliverEventArgs e)
+        protected override async Task ConsumerReceived(object? sender, BasicDeliverEventArgs e)
         {
             logger.LogInformation("Data received at: {time}", DateTimeOffset.Now);
             if (!inProcess)
@@ -34,15 +35,29 @@ namespace OdectyStat1.DataLayer.Consumers
                     inProcess = true;
                     var body = Encoding.UTF8.GetString(e.Body.ToArray());
                     logger.LogInformation("Data received {body}", body);
-                    dynamic message = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(body);
-                    using var scope = serviceProvider.CreateScope();
-                    var service = scope.ServiceProvider.GetService<IGaugeService>();
-                    await service.GaugeRecognizedSucceeded(int.Parse(message.gaugeId.ToString()),message.file.ToString(), decimal.Parse(message.state.ToString(), CultureInfo.InvariantCulture), DateTime.Parse(message.datetime.ToString()));
-                    AcknowledgeMessage(e.DeliveryTag);
+                    dynamic? message = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(body);
+                    if (message != null)
+                    {
+                        using var scope = serviceProvider.CreateScope();
+                        var service = scope.ServiceProvider.GetService<IGaugeService>();
+                        JToken? confidenceToken = message.confidence;
+                        decimal? confidence = confidenceToken?.Value<decimal?>();
+                        JToken? digitProbsToken = message.digit_probs;
+                        decimal[][]? digitProbs = digitProbsToken?.ToObject<decimal[][]>();
+                        JToken? correlationToken = message.correlationId;
+                        decimal correlationId = correlationToken == null ? 0 : decimal.Parse(correlationToken.ToString(), CultureInfo.InvariantCulture);
+                        await service!.GaugeRecognizedSucceeded(int.Parse(message.gaugeId.ToString()), message.file.ToString(), decimal.Parse(message.state.ToString(), CultureInfo.InvariantCulture), DateTime.Parse(message.datetime.ToString()), confidence, correlationId, digitProbs);
+                        await AcknowledgeMessage(e.DeliveryTag);
+                    }
+                    else
+                    {
+                        await RejectMessage(e.DeliveryTag);
+                    }
                 }
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Error processing data: {message}", ex.Message);
+                    await RejectMessage(e.DeliveryTag);
                 }
                 finally
                 {
@@ -51,8 +66,7 @@ namespace OdectyStat1.DataLayer.Consumers
             }
             else
             {
-                //redeliver message
-                RejectMessage(e.DeliveryTag, true);
+                await RejectMessage(e.DeliveryTag, true);
             }
         }
     }

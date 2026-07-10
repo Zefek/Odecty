@@ -6,7 +6,7 @@ namespace OdectyStat1.Application
     {
         Task AddIncrement(int gaugeId, decimal increment, DateTime datetime);
         Task AddNewValue(NewValue newValue);
-        void GaugeRecognizedFailed(int gaugeId, string imagePath);
-        Task GaugeRecognizedSucceeded(int gaugeId, string imagePath, decimal value, DateTime dateTime);
+        Task GaugeRecognizedFailed(int gaugeId, string imagePath, decimal correlationId = 0);
+        Task GaugeRecognizedSucceeded(int gaugeId, string imagePath, decimal value, DateTime dateTime, decimal? confidence, decimal correlationId = 0, decimal[][]? digitProbs = null);
     }
 }

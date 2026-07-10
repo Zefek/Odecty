@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OdectyStat1.DataLayer;
@@ -11,9 +12,11 @@ using OdectyStat1.DataLayer;
 namespace OdectyStat1.Migrations.Diagnostics
 {
     [DbContext(typeof(DiagDbContext))]
-    partial class DiagDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260623205927_AddFileAndTransferDiagnostics")]
+    partial class AddFileAndTransferDiagnostics
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,226 +24,6 @@ namespace OdectyStat1.Migrations.Diagnostics
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("OdectyStat1.Business.CameraConfig", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<short>("AeLevel")
-                        .HasColumnType("smallint")
-                        .HasColumnName("ae_level");
-
-                    b.Property<byte>("Aec2")
-                        .HasColumnType("smallint")
-                        .HasColumnName("aec2");
-
-                    b.Property<int>("AecValue")
-                        .HasColumnType("integer")
-                        .HasColumnName("aec_value");
-
-                    b.Property<byte>("AgcGain")
-                        .HasColumnType("smallint")
-                        .HasColumnName("agc_gain");
-
-                    b.Property<byte>("AwbGain")
-                        .HasColumnType("smallint")
-                        .HasColumnName("awb_gain");
-
-                    b.Property<byte>("Bpc")
-                        .HasColumnType("smallint")
-                        .HasColumnName("bpc");
-
-                    b.Property<short>("Brightness")
-                        .HasColumnType("smallint")
-                        .HasColumnName("brightness");
-
-                    b.Property<byte>("CfgHash")
-                        .HasColumnType("smallint")
-                        .HasColumnName("cfg_hash");
-
-                    b.Property<short>("Contrast")
-                        .HasColumnType("smallint")
-                        .HasColumnName("contrast");
-
-                    b.Property<byte>("Dcw")
-                        .HasColumnType("smallint")
-                        .HasColumnName("dcw");
-
-                    b.Property<byte>("ExposureCtrl")
-                        .HasColumnType("smallint")
-                        .HasColumnName("exposure_ctrl");
-
-                    b.Property<byte>("Framesize")
-                        .HasColumnType("smallint")
-                        .HasColumnName("framesize");
-
-                    b.Property<int>("FwVersion")
-                        .HasColumnType("integer")
-                        .HasColumnName("fw_version");
-
-                    b.Property<byte>("GainCtrl")
-                        .HasColumnType("smallint")
-                        .HasColumnName("gain_ctrl");
-
-                    b.Property<byte>("Gainceiling")
-                        .HasColumnType("smallint")
-                        .HasColumnName("gainceiling");
-
-                    b.Property<int>("GaugeId")
-                        .HasColumnType("integer")
-                        .HasColumnName("gauge_id");
-
-                    b.Property<byte>("Hmirror")
-                        .HasColumnType("smallint")
-                        .HasColumnName("hmirror");
-
-                    b.Property<byte>("Lenc")
-                        .HasColumnType("smallint")
-                        .HasColumnName("lenc");
-
-                    b.Property<byte>("Quality")
-                        .HasColumnType("smallint")
-                        .HasColumnName("quality");
-
-                    b.Property<byte>("RawGma")
-                        .HasColumnType("smallint")
-                        .HasColumnName("raw_gma");
-
-                    b.Property<short>("Saturation")
-                        .HasColumnType("smallint")
-                        .HasColumnName("saturation");
-
-                    b.Property<byte>("SchemaVer")
-                        .HasColumnType("smallint")
-                        .HasColumnName("schema_ver");
-
-                    b.Property<byte>("SpecialEffect")
-                        .HasColumnType("smallint")
-                        .HasColumnName("special_effect");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("timestamp");
-
-                    b.Property<byte>("Vflip")
-                        .HasColumnType("smallint")
-                        .HasColumnName("vflip");
-
-                    b.Property<byte>("WbMode")
-                        .HasColumnType("smallint")
-                        .HasColumnName("wb_mode");
-
-                    b.Property<byte>("Whitebal")
-                        .HasColumnType("smallint")
-                        .HasColumnName("whitebal");
-
-                    b.Property<byte>("Wpc")
-                        .HasColumnType("smallint")
-                        .HasColumnName("wpc");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex(new[] { "CfgHash" }, "ix_camera_config_cfg_hash");
-
-                    b.HasIndex(new[] { "GaugeId" }, "ix_camera_config_gauge_id");
-
-                    b.ToTable("camera_config", (string)null);
-                });
-
-            modelBuilder.Entity("OdectyStat1.Business.DeviceDiagnostic", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<byte>("CameraErrors")
-                        .HasColumnType("smallint")
-                        .HasColumnName("camera_errors");
-
-                    b.Property<int>("CaptureCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("capture_count");
-
-                    b.Property<byte>("CfgHash")
-                        .HasColumnType("smallint")
-                        .HasColumnName("cfg_hash");
-
-                    b.Property<int>("FreeHeapKb")
-                        .HasColumnType("integer")
-                        .HasColumnName("free_heap_kb");
-
-                    b.Property<int>("FwVersion")
-                        .HasColumnType("integer")
-                        .HasColumnName("fw_version");
-
-                    b.Property<int>("GaugeId")
-                        .HasColumnType("integer")
-                        .HasColumnName("gauge_id");
-
-                    b.Property<int>("LoopMaxMs")
-                        .HasColumnType("integer")
-                        .HasColumnName("loop_max_ms");
-
-                    b.Property<int>("MaxAllocKb")
-                        .HasColumnType("integer")
-                        .HasColumnName("max_alloc_kb");
-
-                    b.Property<int>("MinFreeHeapKb")
-                        .HasColumnType("integer")
-                        .HasColumnName("min_free_heap_kb");
-
-                    b.Property<int>("OtaFailures")
-                        .HasColumnType("integer")
-                        .HasColumnName("ota_failures");
-
-                    b.Property<byte>("ResetReason")
-                        .HasColumnType("smallint")
-                        .HasColumnName("reset_reason");
-
-                    b.Property<short>("Rssi")
-                        .HasColumnType("smallint")
-                        .HasColumnName("rssi");
-
-                    b.Property<byte>("SchemaVer")
-                        .HasColumnType("smallint")
-                        .HasColumnName("schema_ver");
-
-                    b.Property<int>("SendFailures")
-                        .HasColumnType("integer")
-                        .HasColumnName("send_failures");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("timestamp");
-
-                    b.Property<int>("TlsErrors")
-                        .HasColumnType("integer")
-                        .HasColumnName("tls_errors");
-
-                    b.Property<long>("UptimeSeconds")
-                        .HasColumnType("bigint")
-                        .HasColumnName("uptime_seconds");
-
-                    b.Property<int>("WifiReconnects")
-                        .HasColumnType("integer")
-                        .HasColumnName("wifi_reconnects");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex(new[] { "GaugeId" }, "ix_device_diagnostics_gauge_id");
-
-                    b.HasIndex(new[] { "Timestamp" }, "ix_device_diagnostics_timestamp");
-
-                    b.ToTable("device_diagnostics", (string)null);
-                });
 
             modelBuilder.Entity("OdectyStat1.Business.FileDiagnostic", b =>
                 {

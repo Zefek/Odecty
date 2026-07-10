@@ -12,6 +12,7 @@ using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using RabbitMQ.Client;
 
 const string ServiceName = "OdectyStat";
 
@@ -48,16 +49,19 @@ builder.Services.AddOpenTelemetry()
 
 builder.Services.Configure<OdectySettings>(builder.Configuration.GetSection("OdectySettings"));
 builder.Services.Configure<GaugeImageLocation>(builder.Configuration.GetSection("GaugeImageLocation"));
+builder.Services.Configure<FirmwareLocation>(builder.Configuration.GetSection("FirmwareLocation"));
 builder.Services.AddSingleton<RabbitMQProvider>();
 builder.Services.AddScoped<IGaugeContext, GaugeContext>();
 builder.Services.AddScoped<IGaugeRepository, GaugeRepository>();
 builder.Services.AddScoped<IMeasurementDayRepository, MeasurementDayRepository>();
 builder.Services.AddScoped<IGaugeService, GaugeService>();
+builder.Services.AddScoped<IDiagnosticsRecorder, DiagnosticsRecorder>();
 builder.Services.AddScoped<IMessageQueue, MessageQueue>();
 builder.Services.AddScoped<IMeasurementRepository, MeasurementRepository>();
 builder.Services.AddScoped<IMeasurementStatisticsRepository, MeasurementStatisticsRepository>();
 builder.Services.AddScoped<IHomeAssistantStatisticsRepository, HomeAssistantStatisticsRepository>();
 builder.Services.AddScoped<IGaugeQueryService, GaugeQueryService>();
+builder.Services.AddScoped<IFirmwareService, FirmwareService>();
 
 builder.Services.AddDbContext<GaugeDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("Odecty")));
@@ -70,6 +74,9 @@ builder.Services.AddHostedService<ConsumerBackgroundService>();
 builder.Services.AddSingleton<IRabbitMQConsumer, MQClient>();
 builder.Services.AddSingleton<IRabbitMQConsumer, RecognizedSuccess>();
 builder.Services.AddSingleton<IRabbitMQConsumer, RecognizedFailed>();
+builder.Services.AddSingleton<IRabbitMQConsumer, TransferDiag>();
+builder.Services.AddSingleton<IRabbitMQConsumer, DeviceDiag>();
+builder.Services.AddSingleton<IRabbitMQConsumer, ConfigDiag>();
 builder.Services.AddHostedService<BinaryConsumerBackgroundService>();
 builder.Services.AddSingleton<IBinaryMessageHandler, HeaterDiagHandler>();
 builder.Services.AddSingleton<IBinaryMessageHandler, LSSensorDiagHandler>();
@@ -89,10 +96,17 @@ builder.Services.AddHealthChecks()
         name: "postgres-diagnostics",
         tags: new[] { "ready" })
     .AddRabbitMQ(
-        (sp, opts) =>
+        async (sp) =>
         {
             var s = sp.GetRequiredService<IOptions<OdectySettings>>().Value;
-            opts.ConnectionUri = new Uri($"amqp://{Uri.EscapeDataString(s.RabbitMQUsername)}:{Uri.EscapeDataString(s.RabbitMQPassword)}@{s.RabbitMQHost}/{Uri.EscapeDataString(s.RabbitMQVHost)}");
+            var factory = new ConnectionFactory
+            {
+                UserName = s.RabbitMQUsername,
+                Password = s.RabbitMQPassword,
+                HostName = s.RabbitMQHost,
+                VirtualHost = s.RabbitMQVHost
+            };
+            return await factory.CreateConnectionAsync();
         },
         name: "rabbitmq",
         tags: new[] { "ready" });
@@ -123,6 +137,8 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<DiagDbContext>();
     await db.Database.MigrateAsync();
+    var gaugeDb = scope.ServiceProvider.GetRequiredService<GaugeDbContext>();
+    await gaugeDb.Database.MigrateAsync();
 }
 
 await app.RunAsync();

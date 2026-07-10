@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using OdectyStat1.Business;
 using OdectyStat1.Contracts;
 using OdectyStat1.Dto;
@@ -11,18 +11,27 @@ namespace OdectyStat1.Application
         private readonly IGaugeContext context;
         private readonly IOptions<GaugeImageLocation> options;
         private readonly ILogger<GaugeService> logger;
+        private readonly IDiagnosticsRecorder diagnostics;
 
-        public GaugeService(IGaugeContext context, IOptions<GaugeImageLocation> options, ILogger<GaugeService> logger)
+        private const int DigitPositions = 5;
+
+        public GaugeService(IGaugeContext context, IOptions<GaugeImageLocation> options, ILogger<GaugeService> logger, IDiagnosticsRecorder diagnostics)
         {
             this.context = context;
             this.options = options;
             this.logger = logger;
+            this.diagnostics = diagnostics;
         }
 
         public async Task AddNewValue(NewValue newValue)
         {
             Console.WriteLine("Add new value " + newValue.GaugeId);
             var gauge = await context.GaugeRepository.GetGauge(newValue.GaugeId);
+            if (gauge == null)
+            {
+                logger.LogError("Gauge {gaugeId} not found.", newValue.GaugeId);
+                throw new Exception($"Gauge {newValue.GaugeId} not found.");
+            }
             gauge.SetNewValue(newValue.Value, newValue.Datetime);
             await context.SaveChangesAsync();
             await context.MessageQueue.Publish(new { gaugeId = newValue.GaugeId, value = gauge.LastValue }, MessageQueueRoutingKeys.Odecty_Gauge_Lastvaluechanged);
@@ -82,22 +91,46 @@ namespace OdectyStat1.Application
         public async Task AddIncrement(int gaugeId, decimal increment, DateTime datetime)
         {
             var gauge = await context.GaugeRepository.GetGauge(gaugeId);
-            gauge.AddIncrement(increment, datetime);
+            gauge?.AddIncrement(increment, datetime);
             await context.SaveChangesAsync();
         }
 
-        public void GaugeRecognizedFailed(int gaugeId, string imagePath)
+        public async Task GaugeRecognizedFailed(int gaugeId, string imagePath, decimal correlationId = 0)
         {
             logger.LogInformation("Recognition failed for gauge {gaugeId} with image {imagePath}", gaugeId, imagePath);
-            MoveFile(gaugeId, imagePath, imagePath, false);
+            var sourcePath = Path.Combine(string.Format(options.Value.Path, gaugeId), imagePath);
+            var dateFolder = File.GetCreationTime(sourcePath).ToString("yyyy-MM-dd");
+            var destPath = MoveFile(gaugeId, imagePath, imagePath, dateFolder, false);
+            await RecordFileDiagnostic(correlationId, gaugeId, destPath, success: false, recognizedValue: null, correctedValue: null, confidence: null);
         }
 
-        public async Task GaugeRecognizedSucceeded(int gaugeId, string imagePath, decimal value, DateTime dateTime)
+        private decimal GetDiff(decimal candidate, decimal prevValue, out decimal corrected)
+        {
+            if (candidate < prevValue)
+            {
+                if (prevValue - candidate <= 0.0001m)
+                {
+                    corrected = prevValue;
+                    return corrected - prevValue;
+                }
+            }
+            corrected = candidate;
+            return candidate - prevValue;
+        }
+
+        public async Task GaugeRecognizedSucceeded(int gaugeId, string imagePath, decimal value, DateTime dateTime, decimal? confidence, decimal correlationId = 0, decimal[][]? digitProbs = null)
         {
             logger.LogInformation("Recognition succeeded for gauge {gaugeId} with image {imagePath} and value {value}", gaugeId, imagePath, value);
+            var recognizedValue = value;
             var gauge = await context.GaugeRepository.GetGauge(gaugeId);
+            if (gauge == null)
+            {
+                logger.LogError("Gauge {gaugeId} not found", gaugeId);
+                throw new Exception($"Gauge {gaugeId} not found.");
+            }
             var localDateTime = dateTime.ToLocalTime();
             bool valid = false;
+            var initialDiff = GetDiff(value, gauge.LastValue, out var initialCorrected);
             if (gauge.LastMeasurement != null)
             {
                 var prevValue = gauge.LastMeasurement.CurrentValue;
@@ -111,13 +144,15 @@ namespace OdectyStat1.Application
                     if (timeDiff.TotalHours > 0 && gauge.MaxValuePerHour.HasValue)
                     {
                         var maxAllowedIncrement = gauge.MaxValuePerHour.Value * (decimal)timeDiff.TotalHours;
-                        if (value - prevValue <= maxAllowedIncrement && value - prevValue >= 0)
+                        var diff = GetDiff(value, prevValue, out var corrected);
+                        if (diff <= maxAllowedIncrement && diff >= 0)
                         {
+                            value = corrected;
                             valid = true;
                         }
                         else
                         {
-                            logger.LogWarning("Recognized value {value} exceeds maximum allowed increment {maxAllowedIncrement} for gauge {gaugeId}. Marking as failed.", value, maxAllowedIncrement, gaugeId);
+                            logger.LogWarning("Recognized value {value} exceeds maximum allowed increment {maxAllowedIncrement} for gauge {gaugeId}.", value, maxAllowedIncrement, gaugeId);
                             valid = false;
 
                             decimal prevInt = Math.Truncate(prevValue);
@@ -128,12 +163,18 @@ namespace OdectyStat1.Application
                             for (int inc = 0; inc <= 2; inc++)
                             {
                                 decimal candidate = (prevInt + inc) + newDec;
-                                decimal diff = candidate - prevValue;
+                                var diffT = GetDiff(candidate, prevValue, out var correctedT);
 
-                                if (diff >= 0 && diff <= maxAllowedIncrement)
+                                if (diffT >= 0 && diffT <= maxAllowedIncrement)
                                 {
-                                    value = decimal.Round(candidate, 4);
+                                    value = decimal.Round(correctedT, 4);
                                     valid = true;
+                                    var recomputed = RecomputeConfidence(value, digitProbs);
+                                    if (recomputed.HasValue)
+                                    {
+                                        logger.LogInformation("Recomputed confidence for gauge {gaugeId} after heuristic correction: {old} -> {new}", gaugeId, confidence, recomputed);
+                                        confidence = recomputed;
+                                    }
                                     break;
                                 }
                             }
@@ -141,52 +182,117 @@ namespace OdectyStat1.Application
                     }
                 }
             }
-            else if (gauge.LastValue > value)
+            else if (initialDiff < 0)
             {
                 logger.LogWarning("Recognized value {value} is less than last value {lastValue} for gauge {gaugeId}. Marking as failed.", value, gauge.LastValue, gaugeId);
                 valid = false;
             }
             else
             {
+                value = initialCorrected;
                 valid = true;
             }
             var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(imagePath);
             var extension = Path.GetExtension(imagePath);
             var newFileName = fileNameWithoutExtension + "_" + value.ToString().Replace(".", "-") + extension;
+            var sourcePath = Path.Combine(string.Format(options.Value.Path, gaugeId), imagePath);
+            var dateFolder = File.GetCreationTime(sourcePath).ToString("yyyy-MM-dd");
+            var relativeImagePath = Path.Combine(dateFolder, newFileName);
+            string destPath;
             if (valid)
             {
                 logger.LogInformation("Updating gauge {gaugeId} with new value {value}", gaugeId, value);
-                gauge.SetNewValue(value, localDateTime, newFileName);
+                gauge.SetNewValue(value, localDateTime, relativeImagePath, confidence);
                 await context.SaveChangesAsync();
-                await context.MessageQueue.MQTTPublish(value.ToString().Replace(",", "."), MessageQueueRoutingKeys.WatermeterState);
+                await context.MessageQueue.MQTTPublish(JsonConvert.SerializeObject(new { Value = value.ToString().Replace(",", "."), Confidence = confidence }), MessageQueueRoutingKeys.WatermeterState);
                 await context.MessageQueue.Publish(new { gaugeId, value = gauge.LastValue }, MessageQueueRoutingKeys.Odecty_Gauge_Lastvaluechanged);
-                MoveFile(gaugeId, imagePath, newFileName, true);
+                destPath = MoveFile(gaugeId, imagePath, newFileName, dateFolder, true);
             }
             else
             {
-                if(gauge.LastMeasurement!=null)
+                if (gauge.LastMeasurement != null)
                 {
                     gauge.LastMeasurement.LastMeasurementDateTime = localDateTime;
                     await context.SaveChangesAsync();
                 }
                 logger.LogWarning("Could not validate recognized value {value} for gauge {gaugeId}. Marking as failed.", value, gaugeId);
-                MoveFile(gaugeId, imagePath, newFileName, false);
+                destPath = MoveFile(gaugeId, imagePath, newFileName, dateFolder, false);
+            }
+            await RecordFileDiagnostic(correlationId, gaugeId, destPath, success: valid, recognizedValue: recognizedValue, correctedValue: value, confidence: confidence);
+        }
+
+        private decimal? RecomputeConfidence(decimal value, decimal[][]? digitProbs)
+        {
+            if (digitProbs == null || digitProbs.Length != DigitPositions)
+            {
+                return null;
+            }
+
+            var integerPart = (long)Math.Truncate(Math.Abs(value));
+            if (integerPart >= 100000)
+            {
+                logger.LogWarning("Corrected integer part {integerPart} exceeds {positions} digits, keeping CNN confidence.", integerPart, DigitPositions);
+                return null;
+            }
+
+            var digits = integerPart.ToString().PadLeft(DigitPositions, '0');
+            double logSum = 0;
+            for (int pos = 0; pos < DigitPositions; pos++)
+            {
+                int digit = digits[pos] - '0';
+                var row = digitProbs[pos];
+                if (row == null || digit >= row.Length)
+                {
+                    logger.LogWarning("digit_probs row {pos} missing probability for digit {digit}, keeping CNN confidence.", pos, digit);
+                    return null;
+                }
+                var p = (double)row[digit];
+                if (p <= 0)
+                {
+                    return 0m;
+                }
+                logSum += Math.Log(p);
+            }
+
+            var geoMean = Math.Exp(logSum / DigitPositions);
+            return decimal.Round((decimal)geoMean, 4);
+        }
+
+        private async Task RecordFileDiagnostic(decimal correlationId, int gaugeId, string filePath, bool success, decimal? recognizedValue, decimal? correctedValue, decimal? confidence)
+        {
+            try
+            {
+                await diagnostics.RecordRecognitionAsync(new FileDiagnostic
+                {
+                    CorrelationId = correlationId,
+                    GaugeId = gaugeId,
+                    Timestamp = DateTime.UtcNow,
+                    FilePath = filePath,
+                    Success = success,
+                    RecognizedValue = recognizedValue,
+                    CorrectedValue = correctedValue,
+                    Confidence = confidence
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to record file diagnostic for gauge {gaugeId}, corrId {correlationId}", gaugeId, correlationId);
             }
         }
 
-        private void MoveFile(int gaugeId, string oldPath, string newPath, bool success)
+        private string MoveFile(int gaugeId, string oldPath, string newPath, string dateFolder, bool success)
         {
             var targetFolder = success ? options.Value.RecognizedSuccessFolder : options.Value.RecognizedFailedFolder;
             targetFolder = string.Format(targetFolder, gaugeId);
-            var dateFolder = File.GetCreationTime(Path.Combine(string.Format(options.Value.Path, gaugeId), oldPath))
-                     .ToString("yyyy-MM-dd");
             targetFolder = Path.Combine(targetFolder, dateFolder);
             logger.LogInformation("Moving file {imagePath} to folder {targetFolder}", oldPath, targetFolder);
             if (!Directory.Exists(targetFolder))
             {
                 Directory.CreateDirectory(targetFolder);
             }
-            File.Move(Path.Combine(string.Format(options.Value.Path, gaugeId), oldPath), Path.Combine(targetFolder, newPath));
+            var destPath = Path.Combine(targetFolder, newPath);
+            File.Move(Path.Combine(string.Format(options.Value.Path, gaugeId), oldPath), destPath);
+            return destPath;
         }
     }
 }

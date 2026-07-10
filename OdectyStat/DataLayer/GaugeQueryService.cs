@@ -3,13 +3,19 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using OdectyStat1.Contracts;
 using OdectyStat1.Dto;
+using SkiaSharp;
+using System.Drawing;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace OdectyStat1.DataLayer;
 
 internal class GaugeQueryService : IGaugeQueryService
 {
-    private static readonly FileExtensionContentTypeProvider ContentTypeProvider = new();
+    // Pevné WB gainy (zelený nádech z locked-WB kamery je stabilní)
+    private const double gR = 1.31, gG = 1.00, gB = 1.49;
+    private readonly byte[] LutR = BuildLut(gR), LutG = BuildLut(gG), LutB = BuildLut(gB);
 
+    private static readonly FileExtensionContentTypeProvider ContentTypeProvider = new();
     private readonly GaugeDbContext context;
     private readonly IOptions<GaugeImageLocation> imageLocation;
 
@@ -68,9 +74,11 @@ internal class GaugeQueryService : IGaugeQueryService
             contentType = "application/octet-stream";
         }
 
+        var buffer = await File.ReadAllBytesAsync(path, cancellationToken);
+        var result = CorrectWb(buffer);
         return new GaugePhoto
         {
-            Content = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read),
+            Content = new MemoryStream(result),
             ContentType = contentType,
             FileName = Path.GetFileName(path)
         };
@@ -79,8 +87,16 @@ internal class GaugeQueryService : IGaugeQueryService
     private string? ResolvePhotoPath(int gaugeId, string imagePath, DateTime measurementDateTime)
     {
         var gaugeFolder = string.Format(imageLocation.Value.RecognizedSuccessFolder, gaugeId);
-        var measurementDate = measurementDateTime.Date;
 
+        // Nový formát: ImagePath obsahuje i datovou podsložku (yyyy-MM-dd/soubor.jpg) → použij přímo.
+        if (imagePath.Contains('/') || imagePath.Contains('\\'))
+        {
+            var direct = Path.Combine(gaugeFolder, imagePath);
+            return File.Exists(direct) ? direct : null;
+        }
+
+        // Starý formát: jen název souboru → datovou složku odhadneme podle data měření (±1 den).
+        var measurementDate = measurementDateTime.Date;
         foreach (var offset in new[] { 0, -1, 1 })
         {
             var dateFolder = measurementDate.AddDays(offset).ToString("yyyy-MM-dd");
@@ -92,5 +108,27 @@ internal class GaugeQueryService : IGaugeQueryService
         }
 
         return null;
+    }
+
+    private static byte[] BuildLut(double g)
+    {
+        var lut = new byte[256];
+        for (int i = 0; i < 256; i++) lut[i] = (byte)Math.Min(255, Math.Round(i * g));
+        return lut;
+    }
+
+    private byte[] CorrectWb(byte[] jpeg)
+    {
+        using var bmp = SKBitmap.Decode(jpeg);
+        var px = bmp.Pixels;                       // SKColor[]
+        for (int i = 0; i < px.Length; i++)
+        {
+            var c = px[i];
+            px[i] = new SKColor(LutR[c.Red], LutG[c.Green], LutB[c.Blue], c.Alpha);
+        }
+        bmp.Pixels = px;
+        using var img = SKImage.FromBitmap(bmp);
+        using var data = img.Encode(SKEncodedImageFormat.Jpeg, 90);
+        return data.ToArray();
     }
 }
