@@ -10,4 +10,6 @@ internal static class QueuesToConsume
     internal const string GaugeTransferDiag = "GaugeTransfer";
     internal const string GaugeDeviceDiag = "GaugeDiag";
     internal const string GaugeConfig = "GaugeConfig";
+    internal const string GarageOpenChallenge = "garage_open_challenge";
+    internal const string GarageOpenResult = "garage_open_result";
 }

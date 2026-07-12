@@ -50,6 +50,7 @@ builder.Services.AddOpenTelemetry()
 builder.Services.Configure<OdectySettings>(builder.Configuration.GetSection("OdectySettings"));
 builder.Services.Configure<GaugeImageLocation>(builder.Configuration.GetSection("GaugeImageLocation"));
 builder.Services.Configure<FirmwareLocation>(builder.Configuration.GetSection("FirmwareLocation"));
+builder.Services.Configure<GarageSettings>(builder.Configuration.GetSection("Garage"));
 builder.Services.AddSingleton<RabbitMQProvider>();
 builder.Services.AddScoped<IGaugeContext, GaugeContext>();
 builder.Services.AddScoped<IGaugeRepository, GaugeRepository>();
@@ -62,6 +63,9 @@ builder.Services.AddScoped<IMeasurementStatisticsRepository, MeasurementStatisti
 builder.Services.AddScoped<IHomeAssistantStatisticsRepository, HomeAssistantStatisticsRepository>();
 builder.Services.AddScoped<IGaugeQueryService, GaugeQueryService>();
 builder.Services.AddScoped<IFirmwareService, FirmwareService>();
+builder.Services.AddSingleton<GarageHandshakeStore>();
+builder.Services.AddSingleton<IGarageCommandSigner, GarageCommandSigner>();
+builder.Services.AddScoped<IGarageCommandService, GarageCommandService>();
 
 builder.Services.AddDbContext<GaugeDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("Odecty")));
@@ -77,10 +81,13 @@ builder.Services.AddSingleton<IRabbitMQConsumer, RecognizedFailed>();
 builder.Services.AddSingleton<IRabbitMQConsumer, TransferDiag>();
 builder.Services.AddSingleton<IRabbitMQConsumer, DeviceDiag>();
 builder.Services.AddSingleton<IRabbitMQConsumer, ConfigDiag>();
+builder.Services.AddHostedService<GarageTimeoutService>();
 builder.Services.AddHostedService<BinaryConsumerBackgroundService>();
 builder.Services.AddSingleton<IBinaryMessageHandler, HeaterDiagHandler>();
 builder.Services.AddSingleton<IBinaryMessageHandler, LSSensorDiagHandler>();
 builder.Services.AddSingleton<IBinaryMessageHandler, GarageDiagHandler>();
+builder.Services.AddSingleton<IBinaryMessageHandler, GarageChallengeHandler>();
+builder.Services.AddSingleton<IBinaryMessageHandler, GarageResultHandler>();
 
 builder.Services.AddHealthChecks()
     .AddSqlServer(
