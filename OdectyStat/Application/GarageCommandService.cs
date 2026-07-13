@@ -69,10 +69,9 @@ public class GarageCommandService : IGarageCommandService
         }
 
         var signature = signer.Sign(correlationId, nonce.Span);
-        var response = new byte[4 + nonce.Length + signature.Length];
+        var response = new byte[4 + signature.Length];
         BinaryPrimitives.WriteUInt32LittleEndian(response, correlationId);
-        nonce.Span.CopyTo(response.AsSpan(4));
-        signature.CopyTo(response.AsSpan(4 + nonce.Length));
+        signature.CopyTo(response.AsSpan(4));
         await messageQueue.MQTTPublish(response, options.Value.ResponseTopic);
         logger.LogInformation("Garage response signed R={R} identity={Identity}", correlationId, pending.Identity);
     }
