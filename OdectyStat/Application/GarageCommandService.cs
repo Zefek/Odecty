@@ -18,6 +18,11 @@ public class GarageCommandService : IGarageCommandService
     private readonly IOptions<GarageSettings> options;
     private readonly ILogger<GarageCommandService> logger;
 
+    private static string SanitizeForLog(string value)
+    {
+        return value.Replace("\r", "\\r").Replace("\n", "\\n");
+    }
+
     public GarageCommandService(
         IMessageQueue messageQueue,
         IGarageCommandSigner signer,
@@ -56,7 +61,7 @@ public class GarageCommandService : IGarageCommandService
         var request = new byte[4];
         BinaryPrimitives.WriteUInt32LittleEndian(request, r);
         await messageQueue.MQTTPublish(request, options.Value.RequestTopic);
-        logger.LogInformation("Garage handshake started R={R} identity={Identity}", r, identity);
+        logger.LogInformation("Garage handshake started R={R} identity={Identity}", r, SanitizeForLog(identity));
         return r;
     }
 
@@ -73,7 +78,7 @@ public class GarageCommandService : IGarageCommandService
         BinaryPrimitives.WriteUInt32LittleEndian(response, correlationId);
         signature.CopyTo(response.AsSpan(4));
         await messageQueue.MQTTPublish(response, options.Value.ResponseTopic);
-        logger.LogInformation("Garage response signed R={R} identity={Identity}", correlationId, pending.Identity);
+        logger.LogInformation("Garage response signed R={R} identity={Identity}", correlationId, SanitizeForLog(pending.Identity));
     }
 
     public async Task HandleResult(uint correlationId, byte status, CancellationToken cancellationToken)
