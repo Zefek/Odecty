@@ -2,7 +2,6 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Options;
 using OdectyStat1.Application;
 using OdectyStat1.Contracts;
 using OdectyStat1.DataLayer;
@@ -12,7 +11,7 @@ using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using RabbitMQ.Client;
+using OdectyStat1.HealthChecks;
 
 const string ServiceName = "OdectyStat";
 
@@ -102,21 +101,7 @@ builder.Services.AddHealthChecks()
         connectionString: builder.Configuration.GetConnectionString("Diagnostics")!,
         name: "postgres-diagnostics",
         tags: new[] { "ready" })
-    .AddRabbitMQ(
-        async (sp) =>
-        {
-            var s = sp.GetRequiredService<IOptions<OdectySettings>>().Value;
-            var factory = new ConnectionFactory
-            {
-                UserName = s.RabbitMQUsername,
-                Password = s.RabbitMQPassword,
-                HostName = s.RabbitMQHost,
-                VirtualHost = s.RabbitMQVHost
-            };
-            return await factory.CreateConnectionAsync();
-        },
-        name: "rabbitmq",
-        tags: new[] { "ready" });
+    .AddCheck<RabbitMQHealthCheck>("rabbitmq", tags: new[] { "ready" });
 
 builder.Services.AddProblemDetails();
 builder.Services.AddControllers();

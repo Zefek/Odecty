@@ -1,39 +1,41 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace OdectyStat1.DataLayer.Consumers;
 public class ConsumerBackgroundService : BackgroundService
 {
     private readonly IServiceProvider serviceProvider;
+    private readonly ILogger<ConsumerBackgroundService> logger;
 
-    public ConsumerBackgroundService(IServiceProvider serviceProvider)
+    public ConsumerBackgroundService(IServiceProvider serviceProvider, ILogger<ConsumerBackgroundService> logger)
     {
         this.serviceProvider = serviceProvider;
+        this.logger = logger;
     }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        bool stopRequired = false;
-        while (!stopRequired)
+        while (!stoppingToken.IsCancellationRequested)
         {
             foreach (var consumer in serviceProvider.GetServices<IRabbitMQConsumer>())
             {
-                if (!consumer.IsConsuming)
+                try
                 {
-                    await consumer.StartConsuming();
+                    if (!consumer.IsConsuming)
+                    {
+                        await consumer.StartConsuming();
+                    }
+                    if (stoppingToken.IsCancellationRequested)
+                    {
+                        await consumer.StopConsuming();
+                    }
                 }
-                if (stoppingToken.IsCancellationRequested)
+                catch (Exception ex)
                 {
-                    await consumer.StopConsuming();
+                    logger.LogWarning(ex, "Failed to (re)start consumer, will retry.");
                 }
             }
-            // Placeholder for background service logic
             await Task.Delay(1000, stoppingToken);
-            stopRequired = stoppingToken.IsCancellationRequested;
         }
     }
 }
