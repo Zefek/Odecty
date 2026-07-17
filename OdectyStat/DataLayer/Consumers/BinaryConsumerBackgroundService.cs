@@ -33,14 +33,21 @@ public class BinaryConsumerBackgroundService : BackgroundService
         {
             foreach (var consumer in consumers)
             {
-                if (!consumer.IsConsuming)
+                try
                 {
-                    await consumer.StartConsuming();
-                }
+                    if (!consumer.IsConsuming)
+                    {
+                        await consumer.StartConsuming();
+                    }
 
-                if (stoppingToken.IsCancellationRequested)
+                    if (stoppingToken.IsCancellationRequested)
+                    {
+                        await consumer.StopConsuming();
+                    }
+                }
+                catch (Exception ex)
                 {
-                    await consumer.StopConsuming();
+                    logger.LogWarning(ex, "Failed to (re)start binary consumer, will retry.");
                 }
             }
 

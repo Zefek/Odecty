@@ -4,5 +4,6 @@
     {
         Task Publish(object message, string routingKey);
         Task MQTTPublish(string message, string routingKey);
+        Task MQTTPublish(byte[] message, string routingKey);
     }
 }

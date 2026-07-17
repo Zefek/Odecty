@@ -38,6 +38,11 @@ public class MessageQueue : IMessageQueue, IDisposable
 
     public async Task MQTTPublish(string message, string routingKey)
     {
+        await MQTTPublish(Encoding.UTF8.GetBytes(message), routingKey);
+    }
+
+    public async Task MQTTPublish(byte[] message, string routingKey)
+    {
         if (model == null)
         {
             model = await rabbitMQProvider.CreateModel();
@@ -51,7 +56,7 @@ public class MessageQueue : IMessageQueue, IDisposable
                              routingKey: routingKey,
                              mandatory: false,
                              basicProperties: new BasicProperties(),
-                             body: Encoding.UTF8.GetBytes(message));
+                             body: message);
     }
 
     public void Dispose()

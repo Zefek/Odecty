@@ -16,6 +16,7 @@ public class DiagDbContext : DbContext
     public DbSet<TransferDiagnostic> TransferDiagnostics { get; set; }
     public DbSet<DeviceDiagnostic> DeviceDiagnostics { get; set; }
     public DbSet<CameraConfig> CameraConfigs { get; set; }
+    public DbSet<GarageCommand> GarageCommands { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -146,6 +147,22 @@ public class DiagDbContext : DbContext
 
             entity.HasIndex(e => e.GaugeId, "ix_device_diagnostics_gauge_id");
             entity.HasIndex(e => e.Timestamp, "ix_device_diagnostics_timestamp");
+        });
+
+        modelBuilder.Entity<GarageCommand>(entity =>
+        {
+            entity.ToTable("garage_commands");
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.CorrelationId).HasColumnName("correlation_id");
+            entity.Property(e => e.Identity).HasColumnName("identity");
+            entity.Property(e => e.RequestedAt).HasColumnName("requested_at");
+            entity.Property(e => e.CompletedAt).HasColumnName("completed_at");
+            entity.Property(e => e.Status).HasColumnName("status");
+
+            entity.HasIndex(e => e.CorrelationId, "ix_garage_commands_correlation_id");
+            entity.HasIndex(e => e.RequestedAt, "ix_garage_commands_requested_at");
         });
 
         modelBuilder.Entity<CameraConfig>(entity =>
