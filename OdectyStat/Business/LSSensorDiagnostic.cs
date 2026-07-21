@@ -11,4 +11,6 @@ public class LSSensorDiagnostic
     public byte ResetReason { get; set; }
     public int LoopMaxMs { get; set; }
     public sbyte? Rssi { get; set; }
+    public int? FwVersion { get; set; }
+    public int? OtaFailCount { get; set; }
 }

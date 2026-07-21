@@ -8,7 +8,7 @@ namespace OdectyStat1.DataLayer.Consumers;
 
 public class LSSensorDiagHandler : IBinaryMessageHandler
 {
-    private const int ExpectedSize = 14;
+    private const int ExpectedSize = 18;
 
     public string QueueName => QueuesToConsume.LSSensorDiag;
 
@@ -36,20 +36,22 @@ public class LSSensorDiagHandler : IBinaryMessageHandler
         db.LSSensorDiagnostics.Add(data);
         await db.SaveChangesAsync(ct);
 
-        logger.LogDebug("Saved LSSensor diagnostic: uptime={Uptime}min, freeRam={FreeRam}B, loopMax={LoopMax}ms, rssi={Rssi}dBm",
-            data.UptimeMinutes, data.FreeRam, data.LoopMaxMs, data.Rssi);
+        logger.LogDebug("Saved LSSensor diagnostic: uptime={Uptime}min, freeRam={FreeRam}kB, loopMax={LoopMax}ms, rssi={Rssi}dBm, fw={FwVersion}, otaFail={OtaFailCount}",
+            data.UptimeMinutes, data.FreeRam, data.LoopMaxMs, data.Rssi, data.FwVersion, data.OtaFailCount);
     }
 
     private static LSSensorDiagnostic ParseDiagData(ReadOnlySpan<byte> span)
     {
         // DiagData struct layout (little-endian, packed):
         // offset 0:  uint32 uptime (minutes)
-        // offset 4:  uint16 freeRam (bytes)
+        // offset 4:  uint16 freeRam (kilobytes)
         // offset 6:  uint16 wifiReconn
         // offset 8:  uint16 mqttFailCount
         // offset 10: uint8  resetReason
         // offset 11: uint16 loopMaxMs
         // offset 13: int8   rssi (dBm, signed)
+        // offset 14: uint16 fwVersion
+        // offset 16: uint16 otaFailCount
         return new LSSensorDiagnostic
         {
             Timestamp = DateTime.UtcNow,
@@ -59,7 +61,9 @@ public class LSSensorDiagHandler : IBinaryMessageHandler
             MqttFailCount = BinaryPrimitives.ReadUInt16LittleEndian(span[8..]),
             ResetReason = span[10],
             LoopMaxMs = BinaryPrimitives.ReadUInt16LittleEndian(span[11..]),
-            Rssi = (sbyte)span[13]
+            Rssi = (sbyte)span[13],
+            FwVersion = BinaryPrimitives.ReadUInt16LittleEndian(span[14..]),
+            OtaFailCount = BinaryPrimitives.ReadUInt16LittleEndian(span[16..])
         };
     }
 }
