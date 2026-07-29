@@ -2,7 +2,7 @@
   "title": "LS Sensor Diagnostics",
   "uid": "ls-sensor-diagnostics",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "tags": [
     "diagnostics",
@@ -153,7 +153,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "deckbytes",
+          "unit": "decbytes",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -163,11 +163,11 @@
               },
               {
                 "color": "yellow",
-                "value": 200
+                "value": 51200
               },
               {
                 "color": "green",
-                "value": 400
+                "value": 102400
               }
             ]
           }
@@ -189,7 +189,7 @@
         {
           "refId": "A",
           "format": "time_series",
-          "rawSql": "SELECT timestamp AS time, free_ram AS value FROM ls_sensor_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+          "rawSql": "SELECT timestamp AS time, free_ram * 1024 AS value FROM ls_sensor_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
         }
       ]
     },
@@ -387,7 +387,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "deckbytes",
+          "unit": "decbytes",
           "custom": {
             "drawStyle": "line",
             "lineWidth": 1,
@@ -405,11 +405,11 @@
               },
               {
                 "color": "yellow",
-                "value": 200
+                "value": 51200
               },
               {
                 "color": "green",
-                "value": 400
+                "value": 102400
               }
             ]
           }
@@ -429,7 +429,7 @@
         {
           "refId": "A",
           "format": "time_series",
-          "rawSql": "SELECT timestamp AS time, free_ram AS \"Free RAM\" FROM ls_sensor_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+          "rawSql": "SELECT timestamp AS time, free_ram * 1024 AS \"Free RAM\" FROM ls_sensor_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
         }
       ]
     },
@@ -1038,6 +1038,324 @@
         }
       ],
       "description": "Kumulativní počet neúspěšných OTA pokusů od startu zařízení."
+    },
+    {
+      "id": 18,
+      "type": "row",
+      "title": "Sampler (ADC odečet impulzů)",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 19,
+      "type": "stat",
+      "title": "Max doba iterace",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 46
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "µs",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              },
+              {
+                "color": "orange",
+                "value": 2500
+              },
+              {
+                "color": "red",
+                "value": 5000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "max"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, sampler_max_us AS value FROM ls_sensor_diagnostics WHERE $__timeFilter(timestamp) AND sampler_max_us IS NOT NULL ORDER BY timestamp"
+        }
+      ],
+      "description": "Perioda vzorkování 5000 µs. Žlutá >1 ms, oranžová >2.5 ms, červená ≥5 ms (overrun)."
+    },
+    {
+      "id": 20,
+      "type": "stat",
+      "title": "Volný stack sampleru",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 46
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 512
+              },
+              {
+                "color": "green",
+                "value": 1024
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "min"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, sampler_stack_words * 4 AS value FROM ls_sensor_diagnostics WHERE $__timeFilter(timestamp) AND sampler_stack_words IS NOT NULL ORDER BY timestamp"
+        }
+      ],
+      "description": "Min. volný stack tasku (high-water-mark, words×4 = byty). Alokováno 4096 B. Červená <512 B."
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "Sampler overruns",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 46
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, sampler_overruns AS value FROM ls_sensor_diagnostics WHERE $__timeFilter(timestamp) AND sampler_overruns IS NOT NULL ORDER BY timestamp"
+        }
+      ],
+      "description": "Kumulativní počet iterací delších než perioda vzorkování (mělo by zůstat 0)."
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Max doba iterace v čase",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 50
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "µs",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              },
+              {
+                "color": "orange",
+                "value": 2500
+              },
+              {
+                "color": "red",
+                "value": 5000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, sampler_max_us AS \"Max iterace\" FROM ls_sensor_diagnostics WHERE $__timeFilter(timestamp) AND sampler_max_us IS NOT NULL ORDER BY timestamp"
+        }
+      ],
+      "description": "Doba zpracování jedné iterace sampler tasku (2× analogReadMilliVolts + Schmitt). Perioda 5 ms."
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Sampler overruns (čítač)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 50
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, sampler_overruns AS \"Overruns\" FROM ls_sensor_diagnostics WHERE $__timeFilter(timestamp) AND sampler_overruns IS NOT NULL ORDER BY timestamp"
+        }
+      ],
+      "description": "Kumulativní od startu zařízení; mělo by zůstat na 0."
     }
   ]
 }

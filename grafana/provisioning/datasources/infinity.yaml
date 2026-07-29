@@ -1,0 +1,23 @@
+apiVersion: 1
+
+datasources:
+  - name: Health HTTP
+    type: yesoreyeram-infinity-datasource
+    uid: infinity-health
+    access: proxy
+    isDefault: false
+    editable: false
+    jsonData:
+      timeoutInSeconds: 10
+
+  - name: Home Assistant API
+    type: yesoreyeram-infinity-datasource
+    uid: infinity-ha
+    access: proxy
+    isDefault: false
+    editable: false
+    jsonData:
+      timeoutInSeconds: 10
+      httpHeaderName1: Authorization
+    secureJsonData:
+      httpHeaderValue1: "Bearer $HA_TOKEN"

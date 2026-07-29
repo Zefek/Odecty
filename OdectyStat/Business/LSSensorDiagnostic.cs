@@ -13,4 +13,7 @@ public class LSSensorDiagnostic
     public sbyte? Rssi { get; set; }
     public int? FwVersion { get; set; }
     public int? OtaFailCount { get; set; }
+    public int? SamplerMaxUs { get; set; }
+    public int? SamplerStackWords { get; set; }
+    public int? SamplerOverruns { get; set; }
 }

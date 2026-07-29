@@ -1,0 +1,718 @@
+{
+  "title": "Přehled systému – stav",
+  "uid": "system-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "tags": [
+    "diagnostics",
+    "iot",
+    "overview"
+  ],
+  "timezone": "browser",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "type": "textbox",
+        "name": "stat_url",
+        "label": "OdectyStat health URL",
+        "query": "http://127.0.0.1:5080/health/ready",
+        "current": { "value": "http://127.0.0.1:5080/health/ready", "text": "http://127.0.0.1:5080/health/ready" },
+        "hide": 0
+      },
+      {
+        "type": "textbox",
+        "name": "mvc_url",
+        "label": "OdectyMVC health URL",
+        "query": "https://gauge.home/health/ready",
+        "current": { "value": "https://gauge.home/health/ready", "text": "https://gauge.home/health/ready" },
+        "hide": 0
+      },
+      {
+        "type": "textbox",
+        "name": "asr_url",
+        "label": "ArduinoSerialReader health URL",
+        "query": "http://localhost:5000/health/ready",
+        "current": { "value": "http://localhost:5000/health/ready", "text": "http://localhost:5000/health/ready" },
+        "hide": 0
+      },
+      {
+        "type": "textbox",
+        "name": "ha_url",
+        "label": "Home Assistant API URL",
+        "query": "http://homeassistant.local:8123/api/",
+        "current": { "value": "http://homeassistant.local:8123/api/", "text": "http://homeassistant.local:8123/api/" },
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Je něco mimo provoz?",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Kotel / topení",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "grafana-postgresql-heater-diag" },
+      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 1 },
+      "description": "Očekávaný interval 5 min. OK < 1.5×, zpoždění 1.5×, DOWN ≥ 3×.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "mappings": [
+            { "type": "range", "options": { "from": 0, "to": 1.5, "result": { "text": "● OK", "index": 0 } } },
+            { "type": "range", "options": { "from": 1.5, "to": 3, "result": { "text": "● Zpoždění", "index": 1 } } },
+            { "type": "range", "options": { "from": 3, "to": 1000000, "result": { "text": "● DOWN", "index": 2 } } },
+            { "type": "special", "options": { "match": "null", "result": { "text": "● Bez dat", "index": 3 } } }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1.5 },
+              { "color": "red", "value": 3 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT EXTRACT(EPOCH FROM (now() - max(timestamp))) / 60.0 / 5.0 AS intervals FROM heater_diagnostics"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Elektroměr (LSSensor)",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "grafana-postgresql-heater-diag" },
+      "gridPos": { "h": 5, "w": 4, "x": 4, "y": 1 },
+      "description": "Očekávaný interval 5 min. OK < 1.5×, zpoždění 1.5×, DOWN ≥ 3×.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "mappings": [
+            { "type": "range", "options": { "from": 0, "to": 1.5, "result": { "text": "● OK", "index": 0 } } },
+            { "type": "range", "options": { "from": 1.5, "to": 3, "result": { "text": "● Zpoždění", "index": 1 } } },
+            { "type": "range", "options": { "from": 3, "to": 1000000, "result": { "text": "● DOWN", "index": 2 } } },
+            { "type": "special", "options": { "match": "null", "result": { "text": "● Bez dat", "index": 3 } } }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1.5 },
+              { "color": "red", "value": 3 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT EXTRACT(EPOCH FROM (now() - max(timestamp))) / 60.0 / 5.0 AS intervals FROM ls_sensor_diagnostics"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Garáž",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "grafana-postgresql-heater-diag" },
+      "gridPos": { "h": 5, "w": 4, "x": 8, "y": 1 },
+      "description": "Očekávaný interval 15 min. OK < 1.5×, zpoždění 1.5×, DOWN ≥ 3×.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "mappings": [
+            { "type": "range", "options": { "from": 0, "to": 1.5, "result": { "text": "● OK", "index": 0 } } },
+            { "type": "range", "options": { "from": 1.5, "to": 3, "result": { "text": "● Zpoždění", "index": 1 } } },
+            { "type": "range", "options": { "from": 3, "to": 1000000, "result": { "text": "● DOWN", "index": 2 } } },
+            { "type": "special", "options": { "match": "null", "result": { "text": "● Bez dat", "index": 3 } } }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1.5 },
+              { "color": "red", "value": 3 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT EXTRACT(EPOCH FROM (now() - max(timestamp))) / 60.0 / 15.0 AS intervals FROM garage_diagnostics"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Vodoměr – kamera",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "grafana-postgresql-heater-diag" },
+      "gridPos": { "h": 5, "w": 4, "x": 12, "y": 1 },
+      "description": "device_diagnostics, interval 5 min. OK < 1.5×, zpoždění 1.5×, DOWN ≥ 3×.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "mappings": [
+            { "type": "range", "options": { "from": 0, "to": 1.5, "result": { "text": "● OK", "index": 0 } } },
+            { "type": "range", "options": { "from": 1.5, "to": 3, "result": { "text": "● Zpoždění", "index": 1 } } },
+            { "type": "range", "options": { "from": 3, "to": 1000000, "result": { "text": "● DOWN", "index": 2 } } },
+            { "type": "special", "options": { "match": "null", "result": { "text": "● Bez dat", "index": 3 } } }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1.5 },
+              { "color": "red", "value": 3 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT EXTRACT(EPOCH FROM (now() - max(timestamp))) / 60.0 / 5.0 AS intervals FROM device_diagnostics"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Vodoměr – přenos snímků",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "grafana-postgresql-heater-diag" },
+      "gridPos": { "h": 5, "w": 4, "x": 16, "y": 1 },
+      "description": "transfer_diagnostics. Prahy v hodinách – uprav podle cadence focení. OK < 3 h, zpoždění 3 h, DOWN ≥ 12 h.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "mappings": [
+            { "type": "range", "options": { "from": 0, "to": 3, "result": { "text": "● OK", "index": 0 } } },
+            { "type": "range", "options": { "from": 3, "to": 12, "result": { "text": "● Zpoždění", "index": 1 } } },
+            { "type": "range", "options": { "from": 12, "to": 1000000, "result": { "text": "● DOWN", "index": 2 } } },
+            { "type": "special", "options": { "match": "null", "result": { "text": "● Bez dat", "index": 3 } } }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 3 },
+              { "color": "red", "value": 12 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT EXTRACT(EPOCH FROM (now() - max(timestamp))) / 3600.0 AS hours FROM transfer_diagnostics"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Vodoměr – rozpoznání",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "grafana-postgresql-heater-diag" },
+      "gridPos": { "h": 5, "w": 4, "x": 20, "y": 1 },
+      "description": "file_diagnostics (výstup ML). Stojí-li při čerstvém přenosu → spadl Recognition worker / OdectyStat validace. Prahy v hodinách.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "mappings": [
+            { "type": "range", "options": { "from": 0, "to": 3, "result": { "text": "● OK", "index": 0 } } },
+            { "type": "range", "options": { "from": 3, "to": 12, "result": { "text": "● Zpoždění", "index": 1 } } },
+            { "type": "range", "options": { "from": 12, "to": 1000000, "result": { "text": "● DOWN", "index": 2 } } },
+            { "type": "special", "options": { "match": "null", "result": { "text": "● Bez dat", "index": 3 } } }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 3 },
+              { "color": "red", "value": 12 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT EXTRACT(EPOCH FROM (now() - max(timestamp))) / 3600.0 AS hours FROM file_diagnostics"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Souhrn – co naposledy hlásilo (nejhorší nahoře)",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "grafana-postgresql-heater-diag" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 6 },
+      "description": "Jeden řádek na komponentu: kdy naposledy dorazil záznam, jak dávno a kolikanásobek očekávaného intervalu to je.",
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "left" } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "× interval" },
+            "properties": [
+              { "id": "custom.cellOptions", "value": { "type": "color-background" } },
+              { "id": "decimals", "value": 1 },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "yellow", "value": 1.5 },
+                    { "color": "red", "value": 3 }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Před (min)" },
+            "properties": [ { "id": "unit", "value": "m" } ]
+          }
+        ]
+      },
+      "options": { "showHeader": true, "sortBy": [ { "displayName": "× interval", "desc": true } ] },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT komponenta AS \"Komponenta\", last_seen AS \"Naposledy\", round((EXTRACT(EPOCH FROM (now() - last_seen)) / 60.0)::numeric, 0) AS \"Před (min)\", round((EXTRACT(EPOCH FROM (now() - last_seen)) / 60.0 / expected_min)::numeric, 1) AS \"× interval\" FROM ( SELECT 'Kotel (topení)' AS komponenta, max(timestamp) AS last_seen, 5.0 AS expected_min FROM heater_diagnostics UNION ALL SELECT 'Elektroměr (LSSensor)', max(timestamp), 5.0 FROM ls_sensor_diagnostics UNION ALL SELECT 'Garáž', max(timestamp), 15.0 FROM garage_diagnostics UNION ALL SELECT 'Vodoměr – kamera', max(timestamp), 5.0 FROM device_diagnostics UNION ALL SELECT 'Vodoměr – přenos', max(timestamp), 60.0 FROM transfer_diagnostics UNION ALL SELECT 'Vodoměr – rozpoznání', max(timestamp), 60.0 FROM file_diagnostics ) t ORDER BY (EXTRACT(EPOCH FROM (now() - last_seen)) / 60.0 / expected_min) DESC NULLS FIRST"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Reboots zařízení (24 h)",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "grafana-postgresql-heater-diag" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 6 },
+      "description": "Součet poklesů uptime (= rebootů) napříč kotlem, elektroměrem, garáží a kamerou za 24 h.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 3 },
+              { "color": "red", "value": 10 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT (SELECT count(*) FROM (SELECT uptime_minutes, LAG(uptime_minutes) OVER (ORDER BY timestamp) prev FROM heater_diagnostics WHERE timestamp > now() - interval '24 hours') a WHERE prev IS NOT NULL AND uptime_minutes < prev) + (SELECT count(*) FROM (SELECT uptime_minutes, LAG(uptime_minutes) OVER (ORDER BY timestamp) prev FROM ls_sensor_diagnostics WHERE timestamp > now() - interval '24 hours') b WHERE prev IS NOT NULL AND uptime_minutes < prev) + (SELECT count(*) FROM (SELECT uptime_minutes, LAG(uptime_minutes) OVER (ORDER BY timestamp) prev FROM garage_diagnostics WHERE timestamp > now() - interval '24 hours') c WHERE prev IS NOT NULL AND uptime_minutes < prev) + (SELECT count(*) FROM (SELECT uptime_seconds, LAG(uptime_seconds) OVER (ORDER BY timestamp) prev FROM device_diagnostics WHERE timestamp > now() - interval '24 hours') d WHERE prev IS NOT NULL AND uptime_seconds < prev) AS reboots"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Chybové čítače kamery (od bootu)",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "grafana-postgresql-heater-diag" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 6 },
+      "description": "Nejnovější hodnota send_failures + tls_errors + camera_errors + ota_failures z device_diagnostics (kumulativní od posledního bootu).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 10 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT COALESCE(send_failures,0) + COALESCE(tls_errors,0) + COALESCE(camera_errors,0) + COALESCE(ota_failures,0) AS errors FROM device_diagnostics ORDER BY timestamp DESC LIMIT 1"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Neúspěšné přenosy (24 h)",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "grafana-postgresql-heater-diag" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 10 },
+      "description": "transfer_diagnostics se success = false za 24 h (HTTP chyby, TLS, timeouty při odesílání snímku).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT count(*) AS fails FROM transfer_diagnostics WHERE success = false AND timestamp > now() - interval '24 hours'"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Neúspěšná rozpoznání (24 h)",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "grafana-postgresql-heater-diag" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 10 },
+      "description": "file_diagnostics se success = false za 24 h (ML nepřečetl číselník nebo validace odmítla odečet).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT count(*) AS fails FROM file_diagnostics WHERE success = false AND timestamp > now() - interval '24 hours'"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Tep systému – záznamů za 30 min (mezera = výpadek)",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "grafana-postgresql-heater-diag" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 15 },
+      "description": "Počet diagnostických záznamů v 30min oknech na každé zařízení. Souvislá řada = žije; prázdné okno = zařízení (nebo cesta k DB) v tu dobu nehlásilo.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "stacking": { "mode": "none" },
+            "pointSize": 3
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('hour', timestamp) + floor(extract(minute FROM timestamp)::int / 30) * interval '30 min' AS time, count(*) AS \"Kotel\" FROM heater_diagnostics WHERE $__timeFilter(timestamp) GROUP BY 1 ORDER BY 1"
+        },
+        {
+          "refId": "B",
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('hour', timestamp) + floor(extract(minute FROM timestamp)::int / 30) * interval '30 min' AS time, count(*) AS \"Elektroměr\" FROM ls_sensor_diagnostics WHERE $__timeFilter(timestamp) GROUP BY 1 ORDER BY 1"
+        },
+        {
+          "refId": "C",
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('hour', timestamp) + floor(extract(minute FROM timestamp)::int / 30) * interval '30 min' AS time, count(*) AS \"Garáž\" FROM garage_diagnostics WHERE $__timeFilter(timestamp) GROUP BY 1 ORDER BY 1"
+        },
+        {
+          "refId": "D",
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('hour', timestamp) + floor(extract(minute FROM timestamp)::int / 30) * interval '30 min' AS time, count(*) AS \"Vodoměr-kamera\" FROM device_diagnostics WHERE $__timeFilter(timestamp) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "type": "row",
+      "title": "Služby & konzumenti – HTTP health",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 31,
+      "type": "stat",
+      "title": "OdectyStat",
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity-health" },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 25 },
+      "description": "Agreguje SQL Server + PostgreSQL HA + PostgreSQL Diagnostics + RabbitMQ. Zelená = Healthy, žlutá = Degraded, červená = Unhealthy nebo služba neodpovídá.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "● Nedostupné",
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null } ] },
+          "mappings": [
+            { "type": "value", "options": { "Healthy": { "text": "● OK", "color": "green", "index": 0 } } },
+            { "type": "value", "options": { "Degraded": { "text": "● Degradováno", "color": "yellow", "index": 1 } } },
+            { "type": "value", "options": { "Unhealthy": { "text": "● Nezdravé", "color": "red", "index": 2 } } }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/^status$/", "values": false },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity-health" },
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "${stat_url}",
+          "url_options": { "method": "GET" },
+          "root_selector": "",
+          "columns": [ { "selector": "status", "text": "status", "type": "string" } ]
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "stat",
+      "title": "OdectyMVC",
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity-health" },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 25 },
+      "description": "Brána pro snímky z ESP32-CAM. Health check pokrývá RabbitMQ + dostupnost OdectyStat. Červená = Unhealthy nebo neodpovídá.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "● Nedostupné",
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null } ] },
+          "mappings": [
+            { "type": "value", "options": { "Healthy": { "text": "● OK", "color": "green", "index": 0 } } },
+            { "type": "value", "options": { "Degraded": { "text": "● Degradováno", "color": "yellow", "index": 1 } } },
+            { "type": "value", "options": { "Unhealthy": { "text": "● Nezdravé", "color": "red", "index": 2 } } }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/^status$/", "values": false },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity-health" },
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "${mvc_url}",
+          "url_options": { "method": "GET" },
+          "root_selector": "",
+          "columns": [ { "selector": "status", "text": "status", "type": "string" } ]
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "type": "stat",
+      "title": "ArduinoSerialReader",
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity-health" },
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 25 },
+      "description": "Přemostění bezdrátových teploměrů (COM + MQTT → Home Assistant). Health check pokrývá PostgreSQL. Vyžaduje health endpoint doplněný do služby.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "● Nedostupné",
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null } ] },
+          "mappings": [
+            { "type": "value", "options": { "Healthy": { "text": "● OK", "color": "green", "index": 0 } } },
+            { "type": "value", "options": { "Degraded": { "text": "● Degradováno", "color": "yellow", "index": 1 } } },
+            { "type": "value", "options": { "Unhealthy": { "text": "● Nezdravé", "color": "red", "index": 2 } } }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/^status$/", "values": false },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity-health" },
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "${asr_url}",
+          "url_options": { "method": "GET" },
+          "root_selector": "",
+          "columns": [ { "selector": "status", "text": "status", "type": "string" } ]
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "type": "stat",
+      "title": "Home Assistant",
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity-ha" },
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 25 },
+      "description": "REST API ping GET /api/ s Bearer tokenem. Vrací \"API running.\" = HA běží. Červená = neodpovídá nebo token neplatný. Token se nastavuje na datasource Home Assistant API (env HA_TOKEN), ne v dashboardu.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "● Nedostupné",
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null } ] },
+          "mappings": [
+            { "type": "value", "options": { "API running.": { "text": "● OK", "color": "green", "index": 0 } } }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/^message$/", "values": false },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "infinity-ha" },
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "${ha_url}",
+          "url_options": { "method": "GET" },
+          "root_selector": "",
+          "columns": [ { "selector": "message", "text": "message", "type": "string" } ]
+        }
+      ]
+    }
+  ]
+}
