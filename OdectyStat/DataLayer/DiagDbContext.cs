@@ -57,6 +57,9 @@ public class DiagDbContext : DbContext
             entity.Property(e => e.Rssi).HasColumnName("rssi");
             entity.Property(e => e.FwVersion).HasColumnName("fw_version");
             entity.Property(e => e.OtaFailCount).HasColumnName("ota_fail_count");
+            entity.Property(e => e.SamplerMaxUs).HasColumnName("sampler_max_us");
+            entity.Property(e => e.SamplerStackWords).HasColumnName("sampler_stack_words");
+            entity.Property(e => e.SamplerOverruns).HasColumnName("sampler_overruns");
 
             entity.HasIndex(e => e.Timestamp, "ix_ls_sensor_diagnostics_timestamp");
         });
