@@ -19,5 +19,7 @@ datasources:
     jsonData:
       timeoutInSeconds: 10
       httpHeaderName1: Authorization
+      allowedHosts:
+        - http://homeassistant.local:8123
     secureJsonData:
       httpHeaderValue1: "Bearer $HA_TOKEN"
