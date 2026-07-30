@@ -1240,6 +1240,157 @@
         }
       ],
       "description": "Kumulativní počet neúspěšných OTA pokusů od startu zařízení."
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Kalibrace vrat – doba jízdy a předblik",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 54
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "points",
+            "pointSize": 6,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, last_travel_ms AS \"Doba jízdy (T_FULL)\", last_lead_ms AS \"Předblik (T_LEAD)\" FROM garage_diagnostics WHERE $__timeFilter(timestamp) AND last_travel_ms IS NOT NULL ORDER BY timestamp"
+        }
+      ],
+      "description": "Poslední naměřená nepřerušená jízda ze zavřených vrat a délka předbliku majáku. Slouží k dopočítání konstant T_FULL_MS a T_LEAD_DEFAULT_MS ve firmwaru – ber maximum z nepřerušených jízd."
+    },
+    {
+      "id": 24,
+      "type": "stat",
+      "title": "T_FULL – max naměřený",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 50
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT max(last_travel_ms) AS travel FROM garage_diagnostics WHERE $__timeFilter(timestamp) AND last_travel_ms > 0"
+        }
+      ],
+      "description": "Nejdelší naměřená nepřerušená jízda ze zavřených vrat ve zvoleném okně – kandidát na T_FULL_MS."
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "Reverzace vrat na překážce",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 62
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "max": 1,
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "fillOpacity": 20
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, ((sensor_errors & 2) > 0)::int AS \"Reverzace\" FROM garage_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ],
+      "description": "Firmware v daném 15min okně detekoval, že se zavírání protáhlo nad ujetou vzdálenost – pohon pravděpodobně narazil na překážku a odjel zpět do plného otevření. Časté výskyty znamenají překážku ve dveřích nebo zanesenou fotobuňku."
     }
   ]
 }

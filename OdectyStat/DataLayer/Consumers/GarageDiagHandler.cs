@@ -9,7 +9,7 @@ namespace OdectyStat1.DataLayer.Consumers;
 public class GarageDiagHandler : IBinaryMessageHandler
 {
     private const int BaseSize = 17;
-    private const int ExtendedSize = 21;
+    private const int ExtendedSize = 25;
 
     public string QueueName => QueuesToConsume.GarageDiag;
 
@@ -48,14 +48,16 @@ public class GarageDiagHandler : IBinaryMessageHandler
         // offset 4:  uint16 freeRam (bytes on AVR, kilobytes on ESP32)
         // offset 6:  uint16 wifiReconn
         // offset 8:  uint16 mqttReconn
-        // offset 10: uint8  sensorErr (bitmask)
+        // offset 10: uint8  sensorErr (bitmask: 0x01 = AM2302 read error, 0x02 = detekovaná reverzace vrat)
         // offset 11: uint8  resetReason (MCUSR on AVR, esp_reset_reason_t on ESP32)
         // offset 12: uint16 loopMaxMs
         // offset 14: uint16 doorCycles
         // offset 16: int8   rssi (dBm, signed)
-        // -- extended (21-byte payload only) --
+        // -- extended (25-byte payload only) --
         // offset 17: uint16 fwVersion
         // offset 19: uint16 otaFailCount
+        // offset 21: uint16 lastTravelMs (poslední nepřerušená jízda z Closed, kalibrace T_FULL)
+        // offset 23: uint16 lastLeadMs (předblik majáku před rozjezdem, kalibrace T_LEAD)
         var diag = new GarageDiagnostic
         {
             Timestamp = DateTime.UtcNow,
@@ -74,6 +76,8 @@ public class GarageDiagHandler : IBinaryMessageHandler
         {
             diag.FwVersion = BinaryPrimitives.ReadUInt16LittleEndian(span[17..]);
             diag.OtaFailCount = BinaryPrimitives.ReadUInt16LittleEndian(span[19..]);
+            diag.LastTravelMs = BinaryPrimitives.ReadUInt16LittleEndian(span[21..]);
+            diag.LastLeadMs = BinaryPrimitives.ReadUInt16LittleEndian(span[23..]);
         }
 
         return diag;

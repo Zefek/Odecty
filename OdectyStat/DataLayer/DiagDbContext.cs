@@ -82,6 +82,8 @@ public class DiagDbContext : DbContext
             entity.Property(e => e.Rssi).HasColumnName("rssi");
             entity.Property(e => e.FwVersion).HasColumnName("fw_version");
             entity.Property(e => e.OtaFailCount).HasColumnName("ota_fail_count");
+            entity.Property(e => e.LastTravelMs).HasColumnName("last_travel_ms");
+            entity.Property(e => e.LastLeadMs).HasColumnName("last_lead_ms");
 
             entity.HasIndex(e => e.Timestamp, "ix_garage_diagnostics_timestamp");
         });
