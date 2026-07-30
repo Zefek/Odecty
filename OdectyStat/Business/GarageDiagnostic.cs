@@ -13,4 +13,6 @@ public class GarageDiagnostic
     public int LoopMaxMs { get; set; }
     public int DoorCycles { get; set; }
     public sbyte? Rssi { get; set; }
+    public int? FwVersion { get; set; }
+    public int? OtaFailCount { get; set; }
 }

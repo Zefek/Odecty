@@ -8,7 +8,8 @@ namespace OdectyStat1.DataLayer.Consumers;
 
 public class GarageDiagHandler : IBinaryMessageHandler
 {
-    private const int ExpectedSize = 17;
+    private const int BaseSize = 17;
+    private const int ExtendedSize = 21;
 
     public string QueueName => QueuesToConsume.GarageDiag;
 
@@ -23,10 +24,10 @@ public class GarageDiagHandler : IBinaryMessageHandler
 
     public async Task HandleAsync(ReadOnlyMemory<byte> payload, CancellationToken ct)
     {
-        if (payload.Length != ExpectedSize)
+        if (payload.Length != BaseSize && payload.Length != ExtendedSize)
         {
-            logger.LogError("Garage diag message has wrong size: {Length} bytes, expected {Expected}", payload.Length, ExpectedSize);
-            throw new InvalidDataException($"Garage diag payload size {payload.Length} != {ExpectedSize}");
+            logger.LogError("Garage diag message has wrong size: {Length} bytes, expected {Base} or {Extended}", payload.Length, BaseSize, ExtendedSize);
+            throw new InvalidDataException($"Garage diag payload size {payload.Length} != {BaseSize}/{ExtendedSize}");
         }
 
         var data = ParseDiagData(payload.Span);
@@ -36,23 +37,26 @@ public class GarageDiagHandler : IBinaryMessageHandler
         db.GarageDiagnostics.Add(data);
         await db.SaveChangesAsync(ct);
 
-        logger.LogDebug("Saved Garage diagnostic: uptime={Uptime}min, freeRam={FreeRam}B, loopMax={LoopMax}ms, doorCycles={DoorCycles}, rssi={Rssi}dBm",
-            data.UptimeMinutes, data.FreeRam, data.LoopMaxMs, data.DoorCycles, data.Rssi);
+        logger.LogDebug("Saved Garage diagnostic: uptime={Uptime}min, freeRam={FreeRam}, loopMax={LoopMax}ms, doorCycles={DoorCycles}, rssi={Rssi}dBm, fw={FwVersion}, otaFail={OtaFailCount}",
+            data.UptimeMinutes, data.FreeRam, data.LoopMaxMs, data.DoorCycles, data.Rssi, data.FwVersion, data.OtaFailCount);
     }
 
     private static GarageDiagnostic ParseDiagData(ReadOnlySpan<byte> span)
     {
         // DiagData struct layout (little-endian, packed):
         // offset 0:  uint32 uptime (minutes)
-        // offset 4:  uint16 freeRam (bytes)
+        // offset 4:  uint16 freeRam (bytes on AVR, kilobytes on ESP32)
         // offset 6:  uint16 wifiReconn
         // offset 8:  uint16 mqttReconn
         // offset 10: uint8  sensorErr (bitmask)
-        // offset 11: uint8  resetReason
+        // offset 11: uint8  resetReason (MCUSR on AVR, esp_reset_reason_t on ESP32)
         // offset 12: uint16 loopMaxMs
         // offset 14: uint16 doorCycles
         // offset 16: int8   rssi (dBm, signed)
-        return new GarageDiagnostic
+        // -- extended (21-byte payload only) --
+        // offset 17: uint16 fwVersion
+        // offset 19: uint16 otaFailCount
+        var diag = new GarageDiagnostic
         {
             Timestamp = DateTime.UtcNow,
             UptimeMinutes = BinaryPrimitives.ReadUInt32LittleEndian(span),
@@ -65,5 +69,13 @@ public class GarageDiagHandler : IBinaryMessageHandler
             DoorCycles = BinaryPrimitives.ReadUInt16LittleEndian(span[14..]),
             Rssi = (sbyte)span[16]
         };
+
+        if (span.Length >= ExtendedSize)
+        {
+            diag.FwVersion = BinaryPrimitives.ReadUInt16LittleEndian(span[17..]);
+            diag.OtaFailCount = BinaryPrimitives.ReadUInt16LittleEndian(span[19..]);
+        }
+
+        return diag;
     }
 }

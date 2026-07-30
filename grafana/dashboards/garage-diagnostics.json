@@ -189,7 +189,7 @@
         {
           "refId": "A",
           "format": "time_series",
-          "rawSql": "SELECT timestamp AS time, free_ram AS value FROM garage_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+          "rawSql": "SELECT timestamp AS time, free_ram * 1024 AS value FROM garage_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
         }
       ]
     },
@@ -429,7 +429,7 @@
         {
           "refId": "A",
           "format": "time_series",
-          "rawSql": "SELECT timestamp AS time, free_ram AS \"Free RAM\" FROM garage_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+          "rawSql": "SELECT timestamp AS time, free_ram * 1024 AS \"Free RAM\" FROM garage_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
         }
       ]
     },
@@ -695,7 +695,7 @@
     {
       "id": 14,
       "type": "table",
-      "title": "Důvody resetů (AVR MCUSR)",
+      "title": "Důvody resetů (esp_reset_reason_t)",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "grafana-postgresql-heater-diag"
@@ -720,24 +720,64 @@
                   "index": 0
                 },
                 "1": {
-                  "text": "PowerOn (PORF)",
+                  "text": "PowerOn",
                   "index": 1
                 },
                 "2": {
-                  "text": "External (EXTRF)",
+                  "text": "External",
                   "index": 2
                 },
-                "4": {
-                  "text": "BrownOut (BORF)",
+                "3": {
+                  "text": "Software",
                   "index": 3
                 },
-                "8": {
-                  "text": "Watchdog (WDRF)",
+                "4": {
+                  "text": "Panic",
                   "index": 4
                 },
-                "16": {
-                  "text": "JTAG (JTRF)",
+                "5": {
+                  "text": "Int WDT",
                   "index": 5
+                },
+                "6": {
+                  "text": "Task WDT",
+                  "index": 6
+                },
+                "7": {
+                  "text": "Watchdog",
+                  "index": 7
+                },
+                "8": {
+                  "text": "DeepSleep",
+                  "index": 8
+                },
+                "9": {
+                  "text": "BrownOut",
+                  "index": 9
+                },
+                "10": {
+                  "text": "SDIO",
+                  "index": 10
+                },
+                "11": {
+                  "text": "USB",
+                  "index": 11
+                },
+                "12": {
+                  "text": "JTAG",
+                  "index": 12
+                },
+                "13": {
+                  "text": "eFuse",
+                  "index": 13
+                },
+                "14": {
+                  "text": "PowerGlitch",
+                  "index": 14
+                },
+                "15": {
+                  "text": "CPU Lockup",
+                  "index": 15
                 }
               }
             }
@@ -761,24 +801,64 @@
                         "index": 0
                       },
                       "1": {
-                        "text": "PowerOn (PORF)",
+                        "text": "PowerOn",
                         "index": 1
                       },
                       "2": {
-                        "text": "External (EXTRF)",
+                        "text": "External",
                         "index": 2
                       },
-                      "4": {
-                        "text": "BrownOut (BORF)",
+                      "3": {
+                        "text": "Software",
                         "index": 3
                       },
-                      "8": {
-                        "text": "Watchdog (WDRF)",
+                      "4": {
+                        "text": "Panic",
                         "index": 4
                       },
-                      "16": {
-                        "text": "JTAG (JTRF)",
+                      "5": {
+                        "text": "Int WDT",
                         "index": 5
+                      },
+                      "6": {
+                        "text": "Task WDT",
+                        "index": 6
+                      },
+                      "7": {
+                        "text": "Watchdog",
+                        "index": 7
+                      },
+                      "8": {
+                        "text": "DeepSleep",
+                        "index": 8
+                      },
+                      "9": {
+                        "text": "BrownOut",
+                        "index": 9
+                      },
+                      "10": {
+                        "text": "SDIO",
+                        "index": 10
+                      },
+                      "11": {
+                        "text": "USB",
+                        "index": 11
+                      },
+                      "12": {
+                        "text": "JTAG",
+                        "index": 12
+                      },
+                      "13": {
+                        "text": "eFuse",
+                        "index": 13
+                      },
+                      "14": {
+                        "text": "PowerGlitch",
+                        "index": 14
+                      },
+                      "15": {
+                        "text": "CPU Lockup",
+                        "index": 15
                       }
                     }
                   }
@@ -1048,6 +1128,118 @@
           "rawSql": "SELECT timestamp AS time, door_cycles AS \"Door cycles\" FROM garage_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
         }
       ]
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "FW verze",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 50
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT fw_version FROM garage_diagnostics WHERE fw_version IS NOT NULL ORDER BY timestamp DESC LIMIT 1"
+        }
+      ],
+      "description": "Poslední hlášená verze firmwaru. Prázdné u starého AVR firmwaru, který verzi neposílá."
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "OTA selhání (čítač)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 54
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, ota_fail_count AS \"OTA selhání\" FROM garage_diagnostics WHERE $__timeFilter(timestamp) AND ota_fail_count IS NOT NULL ORDER BY timestamp"
+        }
+      ],
+      "description": "Kumulativní počet neúspěšných OTA pokusů od startu zařízení."
     }
   ]
 }
