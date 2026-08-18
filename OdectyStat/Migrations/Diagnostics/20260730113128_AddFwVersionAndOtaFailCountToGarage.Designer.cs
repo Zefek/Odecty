@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OdectyStat1.DataLayer;
@@ -11,9 +12,11 @@ using OdectyStat1.DataLayer;
 namespace OdectyStat1.Migrations.Diagnostics
 {
     [DbContext(typeof(DiagDbContext))]
-    partial class DiagDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260730113128_AddFwVersionAndOtaFailCountToGarage")]
+    partial class AddFwVersionAndOtaFailCountToGarage
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -352,14 +355,6 @@ namespace OdectyStat1.Migrations.Diagnostics
                     b.Property<int?>("FwVersion")
                         .HasColumnType("integer")
                         .HasColumnName("fw_version");
-
-                    b.Property<int?>("LastLeadMs")
-                        .HasColumnType("integer")
-                        .HasColumnName("last_lead_ms");
-
-                    b.Property<int?>("LastTravelMs")
-                        .HasColumnType("integer")
-                        .HasColumnName("last_travel_ms");
 
                     b.Property<int>("LoopMaxMs")
                         .HasColumnType("integer")
