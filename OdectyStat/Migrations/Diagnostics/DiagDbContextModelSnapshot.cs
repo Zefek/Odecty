@@ -356,7 +356,6 @@ namespace OdectyStat1.Migrations.Diagnostics
                     b.Property<int?>("LastCloseMs")
                         .HasColumnType("integer")
                         .HasColumnName("last_close_ms");
-
                     b.Property<int?>("LastLeadMs")
                         .HasColumnType("integer")
                         .HasColumnName("last_lead_ms");
