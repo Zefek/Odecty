@@ -1279,10 +1279,10 @@
         {
           "refId": "A",
           "format": "time_series",
-          "rawSql": "SELECT timestamp AS time, last_travel_ms AS \"Doba jízdy (T_FULL)\", last_lead_ms AS \"Předblik (T_LEAD)\" FROM garage_diagnostics WHERE $__timeFilter(timestamp) AND last_travel_ms IS NOT NULL ORDER BY timestamp"
+          "rawSql": "SELECT timestamp AS time, last_travel_ms AS \"Otevírání (T_FULL)\", last_close_ms AS \"Zavírání (T_FULL_CLOSE)\", last_lead_ms AS \"Předblik (T_LEAD)\" FROM garage_diagnostics WHERE $__timeFilter(timestamp) AND (last_travel_ms IS NOT NULL OR last_close_ms IS NOT NULL) ORDER BY timestamp"
         }
       ],
-      "description": "Poslední naměřená nepřerušená jízda ze zavřených vrat a délka předbliku majáku. Slouží k dopočítání konstant T_FULL_MS a T_LEAD_DEFAULT_MS ve firmwaru – ber maximum z nepřerušených jízd."
+      "description": "Poslední naměřené nepřerušené jízdy oběma směry a délka předbliku majáku. Otevírání se měří od uvolnění reedu po poslední bliknutí, zavírání od rozjezdu po sepnutí reedu – obojí pokrývá tutéž dráhu, takže jsou přímo porovnatelné. Slouží ke kalibraci T_FULL_MS, T_FULL_CLOSE_MS a T_LEAD_DEFAULT_MS."
     },
     {
       "id": 24,
@@ -1336,7 +1336,7 @@
     {
       "id": 25,
       "type": "timeseries",
-      "title": "Reverzace vrat na překážce",
+      "title": "Anomálie vrat a vstupů",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "grafana-postgresql-heater-diag"
@@ -1387,7 +1387,7 @@
         {
           "refId": "A",
           "format": "time_series",
-          "rawSql": "SELECT timestamp AS time, ((sensor_errors & 2) > 0)::int AS \"Reverzace\" FROM garage_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+          "rawSql": "SELECT timestamp AS time, ((sensor_errors & 2) > 0)::int AS \"Reverzace na překážce\", ((sensor_errors & 4) > 0)::int AS \"Reed debounce zahozen\" FROM garage_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
         }
       ],
       "description": "Firmware v daném 15min okně detekoval, že se zavírání protáhlo nad ujetou vzdálenost – pohon pravděpodobně narazil na překážku a odjel zpět do plného otevření. Časté výskyty znamenají překážku ve dveřích nebo zanesenou fotobuňku."

@@ -17,4 +17,5 @@ public class GarageDiagnostic
     public int? OtaFailCount { get; set; }
     public int? LastTravelMs { get; set; }
     public int? LastLeadMs { get; set; }
+    public int? LastCloseMs { get; set; }
 }
