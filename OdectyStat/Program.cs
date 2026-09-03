@@ -85,6 +85,7 @@ builder.Services.AddHostedService<BinaryConsumerBackgroundService>();
 builder.Services.AddSingleton<IBinaryMessageHandler, HeaterDiagHandler>();
 builder.Services.AddSingleton<IBinaryMessageHandler, LSSensorDiagHandler>();
 builder.Services.AddSingleton<IBinaryMessageHandler, GarageDiagHandler>();
+builder.Services.AddSingleton<IBinaryMessageHandler, FveDiagHandler>();
 builder.Services.AddSingleton<IBinaryMessageHandler, GarageChallengeHandler>();
 builder.Services.AddSingleton<IBinaryMessageHandler, GarageResultHandler>();
 
