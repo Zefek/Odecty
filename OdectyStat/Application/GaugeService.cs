@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using System.Globalization;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using OdectyStat1.Business;
 using OdectyStat1.Contracts;
@@ -14,6 +15,7 @@ namespace OdectyStat1.Application
         private readonly IDiagnosticsRecorder diagnostics;
 
         private const int DigitPositions = 5;
+        private const int DialPositions = 4;
 
         public GaugeService(IGaugeContext context, IOptions<GaugeImageLocation> options, ILogger<GaugeService> logger, IDiagnosticsRecorder diagnostics)
         {
@@ -118,6 +120,35 @@ namespace OdectyStat1.Application
             return candidate - prevValue;
         }
 
+        private bool TryCorrectDials(decimal candidate, decimal prevValue, out decimal corrected)
+        {
+            corrected = candidate;
+            var dialFormat = "F" + DialPositions;
+            var candidateText = candidate.ToString(dialFormat, CultureInfo.InvariantCulture);
+            var prevText = prevValue.ToString(dialFormat, CultureInfo.InvariantCulture);
+            if (candidateText.Length != prevText.Length)
+            {
+                return false;
+            }
+            var digits = candidateText.ToCharArray();
+            for (int i = candidateText.Length - DialPositions; i < candidateText.Length; i++)
+            {
+                var step = (candidateText[i] - prevText[i] + 11) % 10;
+                if (step > 2)
+                {
+                    return false;
+                }
+                digits[i] = prevText[i];
+            }
+            var correctedText = new string(digits);
+            if (correctedText != prevText)
+            {
+                return false;
+            }
+            corrected = decimal.Parse(correctedText, CultureInfo.InvariantCulture);
+            return true;
+        }
+
         public async Task GaugeRecognizedSucceeded(int gaugeId, string imagePath, decimal value, DateTime dateTime, decimal? confidence, decimal correlationId = 0, decimal[][]? digitProbs = null)
         {
             logger.LogInformation("Recognition succeeded for gauge {gaugeId} with image {imagePath} and value {value}", gaugeId, imagePath, value);
@@ -155,27 +186,36 @@ namespace OdectyStat1.Application
                             logger.LogWarning("Recognized value {value} exceeds maximum allowed increment {maxAllowedIncrement} for gauge {gaugeId}.", value, maxAllowedIncrement, gaugeId);
                             valid = false;
 
-                            decimal prevInt = Math.Truncate(prevValue);
-
-                            decimal newInt = Math.Truncate(value);
-                            decimal newDec = value - newInt;
-
-                            for (int inc = 0; inc <= 2; inc++)
+                            if (TryCorrectDials(value, prevValue, out var dialCorrected))
                             {
-                                decimal candidate = (prevInt + inc) + newDec;
-                                var diffT = GetDiff(candidate, prevValue, out var correctedT);
+                                logger.LogInformation("Recognized value {value} for gauge {gaugeId} differs from previous value {prevValue} only by +-1 on dial digits, treating the meter as stationary.", value, gaugeId, prevValue);
+                                value = dialCorrected;
+                                valid = true;
+                            }
+                            else
+                            {
+                                decimal prevInt = Math.Truncate(prevValue);
 
-                                if (diffT >= 0 && diffT <= maxAllowedIncrement)
+                                decimal newInt = Math.Truncate(value);
+                                decimal newDec = value - newInt;
+
+                                for (int inc = 0; inc <= 2; inc++)
                                 {
-                                    value = decimal.Round(correctedT, 4);
-                                    valid = true;
-                                    var recomputed = RecomputeConfidence(value, digitProbs);
-                                    if (recomputed.HasValue)
+                                    decimal candidate = (prevInt + inc) + newDec;
+                                    var diffT = GetDiff(candidate, prevValue, out var correctedT);
+
+                                    if (diffT >= 0 && diffT <= maxAllowedIncrement)
                                     {
-                                        logger.LogInformation("Recomputed confidence for gauge {gaugeId} after heuristic correction: {old} -> {new}", gaugeId, confidence, recomputed);
-                                        confidence = recomputed;
+                                        value = decimal.Round(correctedT, 4);
+                                        valid = true;
+                                        var recomputed = RecomputeConfidence(value, digitProbs);
+                                        if (recomputed.HasValue)
+                                        {
+                                            logger.LogInformation("Recomputed confidence for gauge {gaugeId} after heuristic correction: {old} -> {new}", gaugeId, confidence, recomputed);
+                                            confidence = recomputed;
+                                        }
+                                        break;
                                     }
-                                    break;
                                 }
                             }
                         }
@@ -184,8 +224,17 @@ namespace OdectyStat1.Application
             }
             else if (initialDiff < 0)
             {
-                logger.LogWarning("Recognized value {value} is less than last value {lastValue} for gauge {gaugeId}. Marking as failed.", value, gauge.LastValue, gaugeId);
-                valid = false;
+                if (TryCorrectDials(value, gauge.LastValue, out var dialCorrected))
+                {
+                    logger.LogInformation("Recognized value {value} for gauge {gaugeId} differs from last value {lastValue} only by +-1 on dial digits, treating the meter as stationary.", value, gaugeId, gauge.LastValue);
+                    value = dialCorrected;
+                    valid = true;
+                }
+                else
+                {
+                    logger.LogWarning("Recognized value {value} is less than last value {lastValue} for gauge {gaugeId}. Marking as failed.", value, gauge.LastValue, gaugeId);
+                    valid = false;
+                }
             }
             else
             {
