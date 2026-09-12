@@ -546,15 +546,17 @@
       "title": "Tep systému – záznamů za 30 min (mezera = výpadek)",
       "datasource": { "type": "grafana-postgresql-datasource", "uid": "grafana-postgresql-heater-diag" },
       "gridPos": { "h": 9, "w": 24, "x": 0, "y": 15 },
-      "description": "Počet diagnostických záznamů v 30min oknech na každé zařízení. Souvislá řada = žije; prázdné okno = zařízení (nebo cesta k DB) v tu dobu nehlásilo.",
+      "description": "Počet diagnostických záznamů v 30min oknech na každé zařízení, sloupce se skládají na sebe (celková výška = všechny záznamy v okně). Souvislá řada = žije; chybějící segment = zařízení (nebo cesta k DB) v tu dobu nehlásilo.",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
           "custom": {
             "drawStyle": "bars",
-            "lineWidth": 1,
-            "fillOpacity": 60,
-            "stacking": { "mode": "none" },
+            "barAlignment": 0,
+            "barWidthFactor": 0.9,
+            "lineWidth": 0,
+            "fillOpacity": 100,
+            "stacking": { "mode": "normal", "group": "tep" },
             "pointSize": 3
           }
         },

@@ -1130,7 +1130,7 @@
             "lineWidth": 1,
             "fillOpacity": 0
           },
-          "min": 900,
+          "min": 850,
           "max": 1023
         },
         "overrides": []
@@ -1156,7 +1156,7 @@
           "rawSql": "SELECT timestamp AS time, raw_b AS \"Svod B\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) AND ripple_a = 0 AND ripple_b = 0 ORDER BY timestamp"
         }
       ],
-      "description": "Filtr ripple_a = 0 AND ripple_b = 0 — ripple je nenulový jen tehdy, když optočlen v okně vedl, takže nula na obou kanálech znamená, že nehřálo nic. Sledovat trend přes měsíce, ne absolutní číslo: stabilní hodnota = čistá deska, pomalu klesající = vlhkost nebo znečištění. Kolísání o jeden dílek je dither, ignorovat. Klesá-li jen jeden kanál, je to lokální problém na desce; klesají-li oba, je to prostředí. Teplotní kompenzace není k dispozici (uzel vnitřní teplotu neposílá), takže porovnávej stejný měsíc rok na rok. POZOR: pokud hodnota trvale sedí na 1023, ADC saturuje a metrika neplatí — viz docs/MQTT.md v repozitáři BelWattmeter."
+      "description": "Filtr ripple_a = 0 AND ripple_b = 0 — ripple je nenulový jen tehdy, když optočlen v okně vedl, takže nula na obou kanálech přesně znamená, že nehřálo nic. POZOR, čti to jako alarm, ne jako trend: změřeno 2026-09-04, že ADC ESP32 v téhle oblasti saturuje a hlásí 971 jak v noci, tak přes den u nečinného kanálu, zatímco na testovacím rigu byly tyhle dva stavy od sebe devět dílků. Surový odečet 2026-09-05 to potvrdil: v noci adc = 4095..4095, tedy tvrdý strop bez pohybu. Plochá čára na 971 je proto očekávaný stav a NEŘÍKÁ NIC o čistotě desky. Aby hodnota vylezla ze saturace, musel by svod narůst asi třicetinásobně (340 nA proti základně 11 nA), takže i pokles je jen ukazatel hrubého selhání izolace, ne trend. Podrobnosti a co by bylo potřeba pro použitelný trend: docs/MQTT.md v repozitáři BelWattmeter."
     },
     {
       "id": 21,
@@ -1356,7 +1356,7 @@
           "rawSql": "SELECT timestamp AS time, bel_frame_errors AS \"CRC chyby\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
         }
       ],
-      "description": "Kumulativní počet rámců, které dorazily celé a neprošly CRC — zdraví sériové linky od wattmetru. Smetí zahozené při resynchronizaci se nepočítá, takže rostoucí čítač znamená opravdu poškozené rámce (rušení, špatné zakončení, vadná izolace ADuM1201)."
+      "description": "Kumulativní počet rámců, které dorazily celé a neprošly CRC — zdraví sériové linky od wattmetru. Smetí zahozené při resynchronizaci se nepočítá, takže rostoucí čítač znamená opravdu poškozené rámce. Čítač se nuluje rebootem a taky pokaždé, když BEL přejde do offline, takže hodnota patří vždy jen k aktuální relaci wattmetru — ranní čtení nezahrnuje zkomolené rámce z předchozího soumraku. Kromě rušení a špatného zakončení bývá příčinou přeplnění RX bufferu při záseku smyčky."
     }
   ]
 }
