@@ -31,7 +31,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.12" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
@@ -41,7 +41,7 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.18.0" />
     <PackageReference Include="RabbitMQ.Client" Version="7.2.2" />
-    <PackageReference Include="SkiaSharp" Version="4.151.2" />
+    <PackageReference Include="SkiaSharp" Version="4.152.0" />
     <PackageReference Include="System.Security.Permissions" Version="10.0.11" />
   </ItemGroup>
 

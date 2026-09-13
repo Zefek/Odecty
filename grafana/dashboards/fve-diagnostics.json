@@ -1,0 +1,1362 @@
+{
+  "title": "FVE Diagnostics",
+  "uid": "fve-diagnostics",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "tags": [
+    "diagnostics",
+    "iot"
+  ],
+  "timezone": "browser",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Stav zařízení",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Naposledy viděno (× interval)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1.5
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT EXTRACT(EPOCH FROM (now() - max(timestamp))) / 60.0 / 5.0 AS intervals FROM fve_diagnostics"
+        }
+      ],
+      "description": "Očekávaný interval 5 min. Žlutá 1.5×, červená 3× (offline)."
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Uptime",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, uptime_minutes AS value FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Free heap",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 51200
+              },
+              {
+                "color": "green",
+                "value": 102400
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, free_heap_kb * 1024 AS value FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Loop max",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5000
+              },
+              {
+                "color": "orange",
+                "value": 20000
+              },
+              {
+                "color": "red",
+                "value": 45000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "max"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, loop_max_ms AS value FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ],
+      "description": "Watchdog timeout 90 000 ms. Žlutá >5 s, oranžová >20 s, červená >45 s (50 % — riziko WDT resetu)."
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Reboots/window",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT count(*) AS reboots FROM (SELECT uptime_minutes, LAG(uptime_minutes) OVER (ORDER BY timestamp) AS prev FROM fve_diagnostics WHERE $__timeFilter(timestamp)) t WHERE prev IS NOT NULL AND uptime_minutes < prev"
+        }
+      ],
+      "description": "Počet poklesů uptime (= rebootů) v okně."
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Aktuální RSSI",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dBm",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": -85
+              },
+              {
+                "color": "yellow",
+                "value": -75
+              },
+              {
+                "color": "green",
+                "value": -65
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, rssi AS value FROM fve_diagnostics WHERE $__timeFilter(timestamp) AND rssi IS NOT NULL ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Free heap v čase",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 51200
+              },
+              {
+                "color": "green",
+                "value": 102400
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, free_heap_kb * 1024 AS \"Free heap\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        },
+        {
+          "refId": "B",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, min_free_heap_kb * 1024 AS \"Min free heap\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ],
+      "description": "Min free heap je minimum od bootu. Klesá-li trvale, uniká pamět."
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Loop max v čase",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5000
+              },
+              {
+                "color": "orange",
+                "value": 20000
+              },
+              {
+                "color": "red",
+                "value": 45000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, loop_max_ms AS \"Loop max\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ],
+      "description": "Watchdog timeout 90 000 ms. Žlutá >5 s, oranžová >20 s, červená >45 s (50 % — riziko WDT resetu)."
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Uptime (poklesy = reboot)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, uptime_minutes AS \"Uptime\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "WiFi reconnects (čítač)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, wifi_reconnects AS \"WiFi reconnects\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "RSSI v čase",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 0,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dBm",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": -85
+              },
+              {
+                "color": "yellow",
+                "value": -75
+              },
+              {
+                "color": "green",
+                "value": -65
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, rssi AS \"RSSI\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) AND rssi IS NOT NULL ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "MQTT fail count (čítač)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, mqtt_fail_count AS \"MQTT fail count\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "table",
+      "title": "Důvody resetů (ESP32)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 29
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Unknown",
+                  "index": 0
+                },
+                "1": {
+                  "text": "PowerOn",
+                  "index": 1
+                },
+                "2": {
+                  "text": "External",
+                  "index": 2
+                },
+                "3": {
+                  "text": "Software",
+                  "index": 3
+                },
+                "4": {
+                  "text": "Panic",
+                  "index": 4
+                },
+                "5": {
+                  "text": "Int WDT",
+                  "index": 5
+                },
+                "6": {
+                  "text": "Task WDT",
+                  "index": 6
+                },
+                "7": {
+                  "text": "Watchdog",
+                  "index": 7
+                },
+                "8": {
+                  "text": "DeepSleep",
+                  "index": 8
+                },
+                "9": {
+                  "text": "BrownOut",
+                  "index": 9
+                },
+                "10": {
+                  "text": "SDIO",
+                  "index": 10
+                },
+                "11": {
+                  "text": "USB",
+                  "index": 11
+                },
+                "12": {
+                  "text": "JTAG",
+                  "index": 12
+                },
+                "13": {
+                  "text": "eFuse",
+                  "index": 13
+                },
+                "14": {
+                  "text": "PowerGlitch",
+                  "index": 14
+                },
+                "15": {
+                  "text": "CPU Lockup",
+                  "index": 15
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reason"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Unknown",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "PowerOn",
+                        "index": 1
+                      },
+                      "2": {
+                        "text": "External",
+                        "index": 2
+                      },
+                      "3": {
+                        "text": "Software",
+                        "index": 3
+                      },
+                      "4": {
+                        "text": "Panic",
+                        "index": 4
+                      },
+                      "5": {
+                        "text": "Int WDT",
+                        "index": 5
+                      },
+                      "6": {
+                        "text": "Task WDT",
+                        "index": 6
+                      },
+                      "7": {
+                        "text": "Watchdog",
+                        "index": 7
+                      },
+                      "8": {
+                        "text": "DeepSleep",
+                        "index": 8
+                      },
+                      "9": {
+                        "text": "BrownOut",
+                        "index": 9
+                      },
+                      "10": {
+                        "text": "SDIO",
+                        "index": 10
+                      },
+                      "11": {
+                        "text": "USB",
+                        "index": 11
+                      },
+                      "12": {
+                        "text": "JTAG",
+                        "index": 12
+                      },
+                      "13": {
+                        "text": "eFuse",
+                        "index": 13
+                      },
+                      "14": {
+                        "text": "PowerGlitch",
+                        "index": 14
+                      },
+                      "15": {
+                        "text": "CPU Lockup",
+                        "index": 15
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT reset_reason AS \"Reason\", count(*) AS \"Počet\", max(timestamp) AS \"Naposledy\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) GROUP BY reset_reason ORDER BY count(*) DESC"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "Záznamů v okně",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 29
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT count(*) AS records FROM fve_diagnostics WHERE $__timeFilter(timestamp)"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "stat",
+      "title": "Verze FW",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 29
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT fw_version FROM fve_diagnostics WHERE fw_version IS NOT NULL ORDER BY timestamp DESC LIMIT 1"
+        }
+      ],
+      "description": "Poslední hlášená verze firmwaru."
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "OTA selhání (čítač)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, ota_fail_count AS \"OTA selhání\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ],
+      "description": "Kumulativní počet neúspěšných OTA pokusů od startu zařízení."
+    },
+    {
+      "id": 18,
+      "type": "row",
+      "title": "Detekce těles",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Hladina ADC obou kanálů",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 46
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10
+          },
+          "min": 0,
+          "max": 1023
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, raw_a AS \"Kanál A\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        },
+        {
+          "refId": "B",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, raw_b AS \"Kanál B\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ],
+      "description": "Průměr ADC za okno ve stupnici 0–1023 vztažené k 3,3 V. Nízká hodnota = větev vede (hřeje), hodnota u stropu = nečinná. V noci je to měřítko svodu desky, na to je ale samostatný panel vedle."
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Noční hladina svodu (oba kanály nečinné)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 46
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 0
+          },
+          "min": 850,
+          "max": 1023
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, raw_a AS \"Svod A\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) AND ripple_a = 0 AND ripple_b = 0 ORDER BY timestamp"
+        },
+        {
+          "refId": "B",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, raw_b AS \"Svod B\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) AND ripple_a = 0 AND ripple_b = 0 ORDER BY timestamp"
+        }
+      ],
+      "description": "Filtr ripple_a = 0 AND ripple_b = 0 — ripple je nenulový jen tehdy, když optočlen v okně vedl, takže nula na obou kanálech přesně znamená, že nehřálo nic. POZOR, čti to jako alarm, ne jako trend: změřeno 2026-09-04, že ADC ESP32 v téhle oblasti saturuje a hlásí 971 jak v noci, tak přes den u nečinného kanálu, zatímco na testovacím rigu byly tyhle dva stavy od sebe devět dílků. Surový odečet 2026-09-05 to potvrdil: v noci adc = 4095..4095, tedy tvrdý strop bez pohybu. Plochá čára na 971 je proto očekávaný stav a NEŘÍKÁ NIC o čistotě desky. Aby hodnota vylezla ze saturace, musel by svod narůst asi třicetinásobně (340 nA proti základně 11 nA), takže i pokles je jen ukazatel hrubého selhání izolace, ne trend. Podrobnosti a co by bylo potřeba pro použitelný trend: docs/MQTT.md v repozitáři BelWattmeter."
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Ripple obou kanálů",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 54
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 100
+              },
+              {
+                "color": "orange",
+                "value": 256
+              },
+              {
+                "color": "red",
+                "value": 512
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, ripple_a AS \"Ripple A\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        },
+        {
+          "refId": "B",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, ripple_b AS \"Ripple B\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ],
+      "description": "Nejvyšší hodnota dosažená v okamžiku, kdy optočlen ještě vedl — nepřímo měří mezeru mezi vodivými pulzy, tedy střídu střídače. Naměřeno: 22 = mezera 1,0 ms (vede 88 %), 82 = 3,9 ms (54 %), ~512 = práh detekce. Je to jediná veličina, která se zhoršuje plynule, takže dá včasné varování — průměr i podíl času zůstávají zaražené na „vše v pořádku“ až do chvíle, kdy detekce spadne skokem."
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Odpojení zátěže (load dropouts)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 54
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, load_dropouts AS \"Odpojení\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ],
+      "description": "Střídač periodicky ověřuje zastínění panelů a přitom na 480–540 ms odpojuje zátěž, s periodou kolem 317 s. Při okně 300 s je očekávaná hodnota 0 nebo 1 — je to tedy zdarma ukazatel, že střídač normálně pracuje. Vyšší číslo znamená, že se něco děje buď se střídačem, nebo s detekcí."
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "BEL frame errors (čítač)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 62
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, bel_frame_errors AS \"CRC chyby\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ],
+      "description": "Kumulativní počet rámců, které dorazily celé a neprošly CRC — zdraví sériové linky od wattmetru. Smetí zahozené při resynchronizaci se nepočítá, takže rostoucí čítač znamená opravdu poškozené rámce. Čítač se nuluje rebootem a taky pokaždé, když BEL přejde do offline, takže hodnota patří vždy jen k aktuální relaci wattmetru — ranní čtení nezahrnuje zkomolené rámce z předchozího soumraku. Kromě rušení a špatného zakončení bývá příčinou přeplnění RX bufferu při záseku smyčky."
+    }
+  ]
+}
