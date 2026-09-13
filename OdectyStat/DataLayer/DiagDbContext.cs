@@ -12,6 +12,7 @@ public class DiagDbContext : DbContext
     public DbSet<HeaterDiagnostic> HeaterDiagnostics { get; set; }
     public DbSet<LSSensorDiagnostic> LSSensorDiagnostics { get; set; }
     public DbSet<GarageDiagnostic> GarageDiagnostics { get; set; }
+    public DbSet<FveDiagnostic> FveDiagnostics { get; set; }
     public DbSet<FileDiagnostic> FileDiagnostics { get; set; }
     public DbSet<TransferDiagnostic> TransferDiagnostics { get; set; }
     public DbSet<DeviceDiagnostic> DeviceDiagnostics { get; set; }
@@ -87,6 +88,33 @@ public class DiagDbContext : DbContext
             entity.Property(e => e.LastCloseMs).HasColumnName("last_close_ms");
 
             entity.HasIndex(e => e.Timestamp, "ix_garage_diagnostics_timestamp");
+        });
+
+        modelBuilder.Entity<FveDiagnostic>(entity =>
+        {
+            entity.ToTable("fve_diagnostics");
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Timestamp).HasColumnName("timestamp");
+            entity.Property(e => e.UptimeMinutes).HasColumnName("uptime_minutes");
+            entity.Property(e => e.FreeHeapKb).HasColumnName("free_heap_kb");
+            entity.Property(e => e.MinFreeHeapKb).HasColumnName("min_free_heap_kb");
+            entity.Property(e => e.WifiReconnects).HasColumnName("wifi_reconnects");
+            entity.Property(e => e.MqttFailCount).HasColumnName("mqtt_fail_count");
+            entity.Property(e => e.OtaFailCount).HasColumnName("ota_fail_count");
+            entity.Property(e => e.LoopMaxMs).HasColumnName("loop_max_ms");
+            entity.Property(e => e.BelFrameErrors).HasColumnName("bel_frame_errors");
+            entity.Property(e => e.LoadDropouts).HasColumnName("load_dropouts");
+            entity.Property(e => e.RawA).HasColumnName("raw_a");
+            entity.Property(e => e.RawB).HasColumnName("raw_b");
+            entity.Property(e => e.RippleA).HasColumnName("ripple_a");
+            entity.Property(e => e.RippleB).HasColumnName("ripple_b");
+            entity.Property(e => e.ResetReason).HasColumnName("reset_reason");
+            entity.Property(e => e.FwVersion).HasColumnName("fw_version");
+            entity.Property(e => e.Rssi).HasColumnName("rssi");
+
+            entity.HasIndex(e => e.Timestamp, "ix_fve_diagnostics_timestamp");
         });
 
         modelBuilder.Entity<FileDiagnostic>(entity =>
