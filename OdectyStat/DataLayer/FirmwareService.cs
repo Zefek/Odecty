@@ -52,14 +52,8 @@ internal class FirmwareService : IFirmwareService
             return null;
         }
 
-        // Soubor z manifestu musí být prostý název v rámci složky zařízení (žádné cesty mimo ni).
-        if (Path.GetFileName(fileName) != fileName)
-        {
-            return null;
-        }
-
-        var firmwarePath = Path.Combine(deviceFolder, fileName);
-        if (!File.Exists(firmwarePath))
+        var firmwarePath = ResolveFirmwarePath(deviceFolder, fileName);
+        if (firmwarePath is null)
         {
             return null;
         }
@@ -68,8 +62,30 @@ internal class FirmwareService : IFirmwareService
         {
             Content = new FileStream(firmwarePath, FileMode.Open, FileAccess.Read, FileShare.Read),
             ContentType = "application/octet-stream",
-            FileName = fileName
+            FileName = Path.GetFileName(firmwarePath)
         };
+    }
+
+    private static string? ResolveFirmwarePath(string deviceFolder, string fileName)
+    {
+        if (Path.IsPathRooted(fileName))
+        {
+            return null;
+        }
+
+        var normalized = fileName.Replace('/', Path.DirectorySeparatorChar);
+        var root = Path.GetFullPath(deviceFolder);
+        var firmwarePath = Path.GetFullPath(Path.Combine(root, normalized));
+
+        var rootPrefix = root.EndsWith(Path.DirectorySeparatorChar)
+            ? root
+            : root + Path.DirectorySeparatorChar;
+        if (!firmwarePath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return File.Exists(firmwarePath) ? firmwarePath : null;
     }
 
     private static async Task<string?> ReadManifestFileNameAsync(string manifestPath, CancellationToken cancellationToken)
