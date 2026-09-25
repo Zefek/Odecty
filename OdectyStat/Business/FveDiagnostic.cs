@@ -20,4 +20,9 @@ public class FveDiagnostic
     public byte ResetReason { get; set; }
     public int FwVersion { get; set; }
     public sbyte? Rssi { get; set; }
+    public int? FanRpmA { get; set; }
+    public int? FanRpmB { get; set; }
+    public int? FanRunPctA { get; set; }
+    public int? FanRunPctB { get; set; }
+    public int? FanMismatchSlots { get; set; }
 }

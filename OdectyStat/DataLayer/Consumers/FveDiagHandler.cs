@@ -8,7 +8,8 @@ namespace OdectyStat1.DataLayer.Consumers;
 
 public class FveDiagHandler : IBinaryMessageHandler
 {
-    private const int ExpectedSize = 32;
+    private const int BaseSize = 32;
+    private const int ExtendedSize = 40;
 
     public string QueueName => QueuesToConsume.FveDiag;
 
@@ -23,9 +24,9 @@ public class FveDiagHandler : IBinaryMessageHandler
 
     public async Task HandleAsync(ReadOnlyMemory<byte> payload, CancellationToken ct)
     {
-        if (payload.Length < ExpectedSize)
+        if (payload.Length < BaseSize)
         {
-            logger.LogWarning("FVE diag message too short: {Length} bytes, expected {Expected}", payload.Length, ExpectedSize);
+            logger.LogWarning("FVE diag message too short: {Length} bytes, expected {Expected}", payload.Length, BaseSize);
             return;
         }
 
@@ -36,8 +37,8 @@ public class FveDiagHandler : IBinaryMessageHandler
         db.FveDiagnostics.Add(data);
         await db.SaveChangesAsync(ct);
 
-        logger.LogDebug("Saved FVE diagnostic: uptime={Uptime}min, freeHeap={FreeHeap}kB, loopMax={LoopMax}ms, rssi={Rssi}dBm, fw={FwVersion}, belFrameErrors={BelFrameErrors}, dropouts={Dropouts}, raw={RawA}/{RawB}, ripple={RippleA}/{RippleB}",
-            data.UptimeMinutes, data.FreeHeapKb, data.LoopMaxMs, data.Rssi, data.FwVersion, data.BelFrameErrors, data.LoadDropouts, data.RawA, data.RawB, data.RippleA, data.RippleB);
+        logger.LogDebug("Saved FVE diagnostic: uptime={Uptime}min, freeHeap={FreeHeap}kB, loopMax={LoopMax}ms, rssi={Rssi}dBm, fw={FwVersion}, belFrameErrors={BelFrameErrors}, dropouts={Dropouts}, raw={RawA}/{RawB}, ripple={RippleA}/{RippleB}, fanRpm={FanRpmA}/{FanRpmB}, fanRun={FanRunPctA}/{FanRunPctB}%, fanMismatch={FanMismatchSlots}",
+            data.UptimeMinutes, data.FreeHeapKb, data.LoopMaxMs, data.Rssi, data.FwVersion, data.BelFrameErrors, data.LoadDropouts, data.RawA, data.RawB, data.RippleA, data.RippleB, data.FanRpmA, data.FanRpmB, data.FanRunPctA, data.FanRunPctB, data.FanMismatchSlots);
     }
 
     private static FveDiagnostic ParseDiagData(ReadOnlySpan<byte> span)
@@ -59,7 +60,13 @@ public class FveDiagHandler : IBinaryMessageHandler
         // offset 28: uint8  resetReason
         // offset 29: uint16 fwVersion
         // offset 31: int8   rssi (dBm, signed)
-        return new FveDiagnostic
+        // -- extended (40-byte payload only) --
+        // offset 32: uint16 fanRpmA
+        // offset 34: uint16 fanRpmB
+        // offset 36: uint8  fanRunPctA
+        // offset 37: uint8  fanRunPctB
+        // offset 38: uint16 fanMismatchSlots
+        var diag = new FveDiagnostic
         {
             Timestamp = DateTime.UtcNow,
             UptimeMinutes = BinaryPrimitives.ReadUInt32LittleEndian(span),
@@ -79,5 +86,16 @@ public class FveDiagHandler : IBinaryMessageHandler
             FwVersion = BinaryPrimitives.ReadUInt16LittleEndian(span[29..]),
             Rssi = (sbyte)span[31]
         };
+
+        if (span.Length >= ExtendedSize)
+        {
+            diag.FanRpmA = BinaryPrimitives.ReadUInt16LittleEndian(span[32..]);
+            diag.FanRpmB = BinaryPrimitives.ReadUInt16LittleEndian(span[34..]);
+            diag.FanRunPctA = span[36];
+            diag.FanRunPctB = span[37];
+            diag.FanMismatchSlots = BinaryPrimitives.ReadUInt16LittleEndian(span[38..]);
+        }
+
+        return diag;
     }
 }
