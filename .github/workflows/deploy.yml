@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   deploy:
-    uses: Zefek/GithubActions/.github/workflows/windows-service-deploy.yml@ddca9f3f1a40eb20995aec1d5a9e88e305fcdb0a
+    uses: Zefek/GithubActions/.github/workflows/windows-service-deploy.yml@cfa607433f922bc86920077c4e4ea4c335813a37
     with:
       environment:     ${{ inputs.environment }}
       artifact_run_id: ${{ inputs.artifact_run_id }}
