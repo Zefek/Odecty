@@ -113,6 +113,11 @@ public class DiagDbContext : DbContext
             entity.Property(e => e.ResetReason).HasColumnName("reset_reason");
             entity.Property(e => e.FwVersion).HasColumnName("fw_version");
             entity.Property(e => e.Rssi).HasColumnName("rssi");
+            entity.Property(e => e.FanRpmA).HasColumnName("fan_rpm_a");
+            entity.Property(e => e.FanRpmB).HasColumnName("fan_rpm_b");
+            entity.Property(e => e.FanRunPctA).HasColumnName("fan_run_pct_a");
+            entity.Property(e => e.FanRunPctB).HasColumnName("fan_run_pct_b");
+            entity.Property(e => e.FanMismatchSlots).HasColumnName("fan_mismatch_slots");
 
             entity.HasIndex(e => e.Timestamp, "ix_fve_diagnostics_timestamp");
         });
