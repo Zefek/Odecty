@@ -1357,6 +1357,214 @@
         }
       ],
       "description": "Kumulativní počet rámců, které dorazily celé a neprošly CRC — zdraví sériové linky od wattmetru. Smetí zahozené při resynchronizaci se nepočítá, takže rostoucí čítač znamená opravdu poškozené rámce. Čítač se nuluje rebootem a taky pokaždé, když BEL přejde do offline, takže hodnota patří vždy jen k aktuální relaci wattmetru — ranní čtení nezahrnuje zkomolené rámce z předchozího soumraku. Kromě rušení a špatného zakončení bývá příčinou přeplnění RX bufferu při záseku smyčky."
+    },
+    {
+      "id": 24,
+      "type": "row",
+      "title": "Chlazení regulátoru",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 70
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "Otáčky ventilátorů",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 71
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rotrpm",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 9775
+              },
+              {
+                "color": "red",
+                "value": 13225
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, fan_rpm_a AS \"Ventilátor A\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) AND fan_run_pct_a > 0 ORDER BY timestamp"
+        },
+        {
+          "refId": "B",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, fan_rpm_b AS \"Ventilátor B\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) AND fan_run_pct_b > 0 ORDER BY timestamp"
+        }
+      ],
+      "description": "Průměr jen z doby, kdy se ventilátor točil — ne z celého okna. Ventilátory spíná bimetal na chladiči, takže většinu okna stojí; prostý průměr by nerozlišil „běžel půlku okna naplno“ od „běžel celé okno na půl plynu“. Okna, ve kterých se vůbec netočil, jsou proto odfiltrovaná (jinak by nula vypadala jako závada). Pásmo 9 775–13 225 je jmenovitých 11 500 ot/min ±15 % podle datasheetu Sunon MF30101V1. Sleduj trend přes sezónu, ne absolutní číslo: vysychající ložisko se ohlásí pomalu klesajícími otáčkami dřív, než začne být slyšet — předchozí sadu odhalil až rachot při rozběhu. Zhruba poloviční nebo dvojnásobná hodnota není vadný ventilátor, ale špatně nastavené FAN_PULSES_PER_REV."
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "Podíl běhu ventilátorů",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 71
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, fan_run_pct_a AS \"Ventilátor A\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        },
+        {
+          "refId": "B",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, fan_run_pct_b AS \"Ventilátor B\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ],
+      "description": "Kolik procent okna ventilátor běžel. Spíná ho bimetalový termostat KSD9700 na chladiči, takže tohle je nepřímý ukazatel toho, jak moc je regulátor zatížený a jestli termostat sedí tam, kde má. Trvalých 100 % za slunečného dne znamená, že chlazení jede na doraz a je na místě zvážit posun prahu; nula za plného provozu naopak znamená, že termostat nesepnul nebo vypadla 12V větev. Jmenovatelem je skutečně změřený čas, ne nominálních 300 s — sloty delší než FAN_SLOT_MAX_MS se zahazují."
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "Ventilátory mimo shodu",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 79
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 20
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, fan_mismatch_slots AS \"Sekund v okně\" FROM fve_diagnostics WHERE $__timeFilter(timestamp) ORDER BY timestamp"
+        }
+      ],
+      "description": "Počet sekund v okně, kdy točil právě jeden ventilátor z dvojice — jediný způsob, jak poznat mrtvý kus. Zablokovaný rotor drží FG signál trvale na V_H, takže je na signálu k nerozeznání od vypnutého; bez druhého ventilátoru jako reference nejde odlišit „termostat je rozepnutý“ od „ventilátor nejede“. Oba kusy ale visí na téže větvi za termostatem, takže je spíná i vypíná společně a rozdíl mezi nimi nemůže být jeho práce. Jednotky sekund jsou normální rozdíl náběhu a doběhu při sepnutí; desítky a výš znamenají poruchu. Nepokryje to jediný případ — výpadek celé 12V větve, kdy zhasnou oba naráz; ten se pozná z nulového podílu běhu v době, kdy duty ukazuje plný provoz."
     }
   ]
 }
