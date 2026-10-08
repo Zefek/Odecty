@@ -10,7 +10,7 @@ public class GarageDiagHandler : IBinaryMessageHandler
 {
     private const int BaseSize = 17;
     private const int ExtendedSize = 27;
-    private const string DeviceName = "GarageESP32";
+    private const string DeviceName = "Garage";
 
     public string QueueName => QueuesToConsume.GarageDiag;
 
