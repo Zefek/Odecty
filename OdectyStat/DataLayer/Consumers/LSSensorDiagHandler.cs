@@ -10,6 +10,7 @@ public class LSSensorDiagHandler : IBinaryMessageHandler
 {
     private const int BaseSize = 18;
     private const int ExtendedSize = 24;
+    private const string DeviceName = "LSSensor";
 
     public string QueueName => QueuesToConsume.LSSensorDiag;
 
@@ -36,9 +37,11 @@ public class LSSensorDiagHandler : IBinaryMessageHandler
         var db = scope.ServiceProvider.GetRequiredService<DiagDbContext>();
         db.LSSensorDiagnostics.Add(data);
         await db.SaveChangesAsync(ct);
-
         logger.LogDebug("Saved LSSensor diagnostic: uptime={Uptime}min, freeRam={FreeRam}kB, loopMax={LoopMax}ms, rssi={Rssi}dBm, fw={FwVersion}, otaFail={OtaFailCount}, samplerMax={SamplerMax}us, stackHwm={StackHwm}w, overruns={Overruns}",
             data.UptimeMinutes, data.FreeRam, data.LoopMaxMs, data.Rssi, data.FwVersion, data.OtaFailCount, data.SamplerMaxUs, data.SamplerStackWords, data.SamplerOverruns);
+
+        var otaNotifier = scope.ServiceProvider.GetRequiredService<IOtaNotificationService>();
+        await otaNotifier.NotifyIfOutdatedAsync(DeviceName, data.FwVersion, ct);
     }
 
     private static LSSensorDiagnostic ParseDiagData(ReadOnlySpan<byte> span)

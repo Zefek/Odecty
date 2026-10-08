@@ -10,6 +10,7 @@ public class GarageDiagHandler : IBinaryMessageHandler
 {
     private const int BaseSize = 17;
     private const int ExtendedSize = 27;
+    private const string DeviceName = "GarageESP32";
 
     public string QueueName => QueuesToConsume.GarageDiag;
 
@@ -39,6 +40,9 @@ public class GarageDiagHandler : IBinaryMessageHandler
 
         logger.LogDebug("Saved Garage diagnostic: uptime={Uptime}min, freeRam={FreeRam}, loopMax={LoopMax}ms, doorCycles={DoorCycles}, rssi={Rssi}dBm, fw={FwVersion}, otaFail={OtaFailCount}",
             data.UptimeMinutes, data.FreeRam, data.LoopMaxMs, data.DoorCycles, data.Rssi, data.FwVersion, data.OtaFailCount);
+
+        var otaNotifier = scope.ServiceProvider.GetRequiredService<IOtaNotificationService>();
+        await otaNotifier.NotifyIfOutdatedAsync(DeviceName, data.FwVersion, ct);
     }
 
     private static GarageDiagnostic ParseDiagData(ReadOnlySpan<byte> span)
