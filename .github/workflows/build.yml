@@ -30,7 +30,10 @@ jobs:
       run: dotnet build --no-restore --configuration Release
 
     - name: Publish aplikace
-      run: dotnet publish --configuration Release --no-build --output ./publish_output
+      run: dotnet publish OdectyStat/OdectyStat1.csproj --configuration Release --runtime win-x64 --self-contained false --output ./publish_output
+
+    - name: Odstranění nativních symbolů
+      run: Get-ChildItem ./publish_output -Recurse -Filter libSkiaSharp.pdb | Remove-Item
 
     - name: Nahrání do Artifactů
       uses: actions/upload-artifact@v7
