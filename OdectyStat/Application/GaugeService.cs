@@ -36,7 +36,6 @@ namespace OdectyStat1.Application
             }
             gauge.SetNewValue(newValue.Value, newValue.Datetime);
             await context.SaveChangesAsync();
-            await context.MessageQueue.Publish(new { gaugeId = newValue.GaugeId, value = gauge.LastValue }, MessageQueueRoutingKeys.Odecty_Gauge_Lastvaluechanged);
             var service = new ComputeService3(context);
             var result = await service.Compute(newValue.GaugeId);
             context.AddRange(result);
@@ -254,7 +253,6 @@ namespace OdectyStat1.Application
                 gauge.SetNewValue(value, localDateTime, relativeImagePath, confidence);
                 await context.SaveChangesAsync();
                 await context.MessageQueue.MQTTPublish(JsonConvert.SerializeObject(new { Value = value.ToString().Replace(",", "."), Confidence = confidence }), MessageQueueRoutingKeys.WatermeterState);
-                await context.MessageQueue.Publish(new { gaugeId, value = gauge.LastValue }, MessageQueueRoutingKeys.Odecty_Gauge_Lastvaluechanged);
                 destPath = MoveFile(gaugeId, imagePath, newFileName, dateFolder, true);
             }
             else
