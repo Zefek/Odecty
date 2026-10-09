@@ -10,6 +10,7 @@ public class FveDiagHandler : IBinaryMessageHandler
 {
     private const int BaseSize = 32;
     private const int ExtendedSize = 40;
+    private const string DeviceName = "BelFVE";
 
     public string QueueName => QueuesToConsume.FveDiag;
 
@@ -39,6 +40,9 @@ public class FveDiagHandler : IBinaryMessageHandler
 
         logger.LogDebug("Saved FVE diagnostic: uptime={Uptime}min, freeHeap={FreeHeap}kB, loopMax={LoopMax}ms, rssi={Rssi}dBm, fw={FwVersion}, belFrameErrors={BelFrameErrors}, dropouts={Dropouts}, raw={RawA}/{RawB}, ripple={RippleA}/{RippleB}, fanRpm={FanRpmA}/{FanRpmB}, fanRun={FanRunPctA}/{FanRunPctB}%, fanMismatch={FanMismatchSlots}",
             data.UptimeMinutes, data.FreeHeapKb, data.LoopMaxMs, data.Rssi, data.FwVersion, data.BelFrameErrors, data.LoadDropouts, data.RawA, data.RawB, data.RippleA, data.RippleB, data.FanRpmA, data.FanRpmB, data.FanRunPctA, data.FanRunPctB, data.FanMismatchSlots);
+
+        var otaNotifier = scope.ServiceProvider.GetRequiredService<IOtaNotificationService>();
+        await otaNotifier.NotifyIfOutdatedAsync(DeviceName, data.FwVersion, ct);
     }
 
     private static FveDiagnostic ParseDiagData(ReadOnlySpan<byte> span)
