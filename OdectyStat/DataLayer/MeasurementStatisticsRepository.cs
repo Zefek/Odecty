@@ -12,9 +12,9 @@ namespace OdectyStat1.DataLayer
         {
             this.context = context;
         }
-        public async Task<GaugeMeasuerementStatistics?> GetLast(int gaugeId)
+        public async Task<GaugeMeasurementStatistics?> GetLast(int gaugeId)
         {
-            return await context.GaugeMeasuerementStatistics.Where(k => k.GaugeId == gaugeId).OrderByDescending(k => k.MeasurementDateTime).FirstOrDefaultAsync();
+            return await context.GaugeMeasurementStatistics.Where(k => k.GaugeId == gaugeId).OrderByDescending(k => k.MeasurementDateTime).FirstOrDefaultAsync();
         }
     }
 }

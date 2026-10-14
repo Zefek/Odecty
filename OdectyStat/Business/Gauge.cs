@@ -19,7 +19,7 @@ namespace OdectyStat1.Business
         public decimal InitialValue { get; set; }
 
         public ICollection<GaugeMeasurement> Measurements { get; set; } = new List<GaugeMeasurement>();
-        public ICollection<GaugeMeasuerementStatistics> MeasurementsStatistics { get; set; } = new List<GaugeMeasuerementStatistics>();
+        public ICollection<GaugeMeasurementStatistics> MeasurementsStatistics { get; set; } = new List<GaugeMeasurementStatistics>();
         public int? HomeassistantId { get; internal set; }
 
         public void SetNewValue(decimal newValue, DateTime datetime, string? imagePath = null, decimal? confidence = null)
@@ -60,7 +60,7 @@ namespace OdectyStat1.Business
             LastValue = newValue;
         }
 
-        public void SetStatistics(IEnumerable<GaugeMeasuerementStatistics> statistics)
+        public void SetStatistics(IEnumerable<GaugeMeasurementStatistics> statistics)
         {
             var stats = MeasurementsStatistics.Where(k => k.GaugeId == statistics.First().GaugeId).AsEnumerable().Where(k => k.MeasurementDateTime >= statistics.Min(k => k.MeasurementDateTime) && k.MeasurementDateTime <= statistics.Max(k => k.MeasurementDateTime)).ToList();
             foreach (var stat in stats)

@@ -43,7 +43,6 @@ builder.Services.AddOpenTelemetry()
         .AddHttpClientInstrumentation()
         .AddRuntimeInstrumentation()
         .AddMeter("Npgsql")
-        .AddMeter("Microsoft.Data.SqlClient.EventSource")
         .AddOtlpExporter(o => o.Endpoint = otlpEndpoint));
 
 builder.Services.Configure<OdectySettings>(builder.Configuration.GetSection("OdectySettings"));
@@ -70,7 +69,7 @@ builder.Services.AddSingleton<IGarageCommandSigner, GarageCommandSigner>();
 builder.Services.AddScoped<IGarageCommandService, GarageCommandService>();
 
 builder.Services.AddDbContext<GaugeDbContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("Odecty")));
+    opt.UseNpgsql(builder.Configuration.GetConnectionString("Odecty")));
 builder.Services.AddDbContext<HomeAssistantDbContext>(opt =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("HomeAssistant")));
 builder.Services.AddDbContext<DiagDbContext>(opt =>
@@ -93,9 +92,9 @@ builder.Services.AddSingleton<IBinaryMessageHandler, GarageChallengeHandler>();
 builder.Services.AddSingleton<IBinaryMessageHandler, GarageResultHandler>();
 
 builder.Services.AddHealthChecks()
-    .AddSqlServer(
+    .AddNpgSql(
         connectionString: builder.Configuration.GetConnectionString("Odecty")!,
-        name: "sqlserver-odecty",
+        name: "postgres-odecty",
         tags: new[] { "ready" })
     .AddNpgSql(
         connectionString: builder.Configuration.GetConnectionString("HomeAssistant")!,
