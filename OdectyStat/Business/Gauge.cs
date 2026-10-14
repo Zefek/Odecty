@@ -17,6 +17,7 @@ namespace OdectyStat1.Business
         public GaugeMeasurement? LastMeasurement { get; set; }
         public decimal? MaxValuePerHour { get; set; }
         public decimal InitialValue { get; set; }
+        public decimal PriceUnitFactor { get; set; }
 
         public ICollection<GaugeMeasurement> Measurements { get; set; } = new List<GaugeMeasurement>();
         public ICollection<GaugeMeasurementStatistics> MeasurementsStatistics { get; set; } = new List<GaugeMeasurementStatistics>();

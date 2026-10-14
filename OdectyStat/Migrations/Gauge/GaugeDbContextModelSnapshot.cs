@@ -48,6 +48,12 @@ namespace OdectyStat1.Migrations.Gauge
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<decimal>("PriceUnitFactor")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(19, 12)
+                        .HasColumnType("numeric(19,12)")
+                        .HasDefaultValue(1m);
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasColumnType("text");
@@ -96,6 +102,36 @@ namespace OdectyStat1.Migrations.Gauge
                     b.ToTable("GaugeMeasurement");
                 });
 
+            modelBuilder.Entity("OdectyStat1.Business.Tariff", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("GaugeId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("MonthlyFee")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)");
+
+                    b.Property<DateOnly>("ValidFrom")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GaugeId", "ValidFrom")
+                        .IsUnique();
+
+                    b.ToTable("Tariff");
+                });
+
             modelBuilder.Entity("OdectyStat1.Entities.GaugeMeasurementStatistics", b =>
                 {
                     b.Property<int>("Id")
@@ -129,6 +165,15 @@ namespace OdectyStat1.Migrations.Gauge
                 {
                     b.HasOne("OdectyStat1.Business.Gauge", null)
                         .WithMany("Measurements")
+                        .HasForeignKey("GaugeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OdectyStat1.Business.Tariff", b =>
+                {
+                    b.HasOne("OdectyStat1.Business.Gauge", null)
+                        .WithMany()
                         .HasForeignKey("GaugeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

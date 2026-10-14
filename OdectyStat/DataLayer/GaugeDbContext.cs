@@ -11,6 +11,7 @@ namespace OdectyStat1.DataLayer
         public DbSet<Gauge> Gauge { get; set; }
         public DbSet<GaugeMeasurement> GaugeMeasurement { get; set; }
         public DbSet<GaugeMeasurementStatistics> GaugeMeasurementStatistics { get; set; }
+        public DbSet<Tariff> Tariff { get; set; }
 
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
         {
@@ -28,6 +29,15 @@ namespace OdectyStat1.DataLayer
                 opt.Property(k => k.InitialValue).HasPrecision(19, 4);
                 opt.Property(k => k.LastValue).HasPrecision(19, 4);
                 opt.Property(k => k.MaxValuePerHour).HasPrecision(18, 2);
+                opt.Property(k => k.PriceUnitFactor).HasPrecision(19, 12).HasDefaultValue(1m);
+            });
+
+            modelBuilder.Entity<Tariff>(opt =>
+            {
+                opt.Property(k => k.UnitPrice).HasPrecision(19, 4);
+                opt.Property(k => k.MonthlyFee).HasPrecision(19, 4);
+                opt.HasOne<Gauge>().WithMany().HasForeignKey(k => k.GaugeId);
+                opt.HasIndex(k => new { k.GaugeId, k.ValidFrom }).IsUnique();
             });
 
             modelBuilder.Entity<GaugeMeasurement>(opt =>
