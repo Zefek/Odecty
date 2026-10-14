@@ -22,6 +22,73 @@ namespace OdectyStat1.Migrations.Gauge
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("OdectyStat1.Business.Advance", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("GaugeId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("MonthlyAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("numeric(19,2)");
+
+                    b.Property<DateOnly>("ValidFrom")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GaugeId", "ValidFrom")
+                        .IsUnique();
+
+                    b.ToTable("Advance");
+                });
+
+            modelBuilder.Entity("OdectyStat1.Business.BillingPeriod", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("CalorificValue")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)");
+
+                    b.Property<decimal>("EndValue")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)");
+
+                    b.Property<int>("GaugeId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("PeriodFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("PeriodTo")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("StartValue")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)");
+
+                    b.Property<decimal?>("VolumeCoefficient")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GaugeId", "PeriodFrom")
+                        .IsUnique();
+
+                    b.ToTable("BillingPeriod");
+                });
+
             modelBuilder.Entity("OdectyStat1.Business.Gauge", b =>
                 {
                     b.Property<int>("Id")
@@ -32,6 +99,12 @@ namespace OdectyStat1.Migrations.Gauge
 
                     b.Property<string>("Description")
                         .HasColumnType("text");
+
+                    b.Property<decimal>("EnergyFactor")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(19, 12)
+                        .HasColumnType("numeric(19,12)")
+                        .HasDefaultValue(1m);
 
                     b.Property<int?>("HomeassistantId")
                         .HasColumnType("integer");
@@ -159,6 +232,24 @@ namespace OdectyStat1.Migrations.Gauge
                     b.HasIndex("GaugeId");
 
                     b.ToTable("GaugeMeasurementStatistics");
+                });
+
+            modelBuilder.Entity("OdectyStat1.Business.Advance", b =>
+                {
+                    b.HasOne("OdectyStat1.Business.Gauge", null)
+                        .WithMany()
+                        .HasForeignKey("GaugeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OdectyStat1.Business.BillingPeriod", b =>
+                {
+                    b.HasOne("OdectyStat1.Business.Gauge", null)
+                        .WithMany()
+                        .HasForeignKey("GaugeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("OdectyStat1.Business.GaugeMeasurement", b =>

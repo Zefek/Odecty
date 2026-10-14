@@ -18,6 +18,7 @@ namespace OdectyStat1.Business
         public decimal? MaxValuePerHour { get; set; }
         public decimal InitialValue { get; set; }
         public decimal PriceUnitFactor { get; set; }
+        public decimal EnergyFactor { get; set; }
 
         public ICollection<GaugeMeasurement> Measurements { get; set; } = new List<GaugeMeasurement>();
         public ICollection<GaugeMeasurementStatistics> MeasurementsStatistics { get; set; } = new List<GaugeMeasurementStatistics>();
