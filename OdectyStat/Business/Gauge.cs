@@ -26,7 +26,8 @@ namespace OdectyStat1.Business
 
         public void SetNewValue(decimal newValue, DateTime datetime, string? imagePath = null, decimal? confidence = null)
         {
-            if(LastMeasurement != null && newValue == LastMeasurement.CurrentValue)
+            var sameValue = LastMeasurement != null && newValue == LastMeasurement.CurrentValue;
+            if (sameValue && datetime.Date == LastMeasurement!.MeasurementDateTime.Date)
             {
                 LastMeasurement.LastMeasurementDateTime = datetime;
                 // Hodnota se nezměnila, ale pokud má nové čtení vyšší confidence,
@@ -40,11 +41,11 @@ namespace OdectyStat1.Business
                 return;
             }
             var increment = newValue - LastValue;
-            if (increment > 0)
+            if (increment > 0 || sameValue)
             {
                 Measurements.Add(new GaugeMeasurement
                 {
-                    Value = increment,
+                    Value = sameValue ? 0 : increment,
                     MeasurementDateTime = datetime,
                     LastMeasurementDateTime = datetime,
                     CurrentValue = newValue,
