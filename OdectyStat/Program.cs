@@ -12,8 +12,15 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using OdectyStat1.HealthChecks;
+using OdectyStat1.Reliability;
 
 const string ServiceName = "OdectyStat";
+
+if (args.Length > 0 && args[0] == "reliability")
+{
+    Environment.ExitCode = await new ReliabilityCli().Run(args[1..]);
+    return;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -67,6 +74,20 @@ builder.Services.AddScoped<IOtaNotificationService, OtaNotificationService>();
 builder.Services.AddSingleton<GarageHandshakeStore>();
 builder.Services.AddSingleton<IGarageCommandSigner, GarageCommandSigner>();
 builder.Services.AddScoped<IGarageCommandService, GarageCommandService>();
+builder.Services.Configure<MqttSettings>(builder.Configuration.GetSection("Mqtt"));
+builder.Services.AddSingleton<MqttPublisher>();
+
+var reliabilityOptions = builder.Configuration.GetSection("Reliability").Get<ReliabilityOptions>() ?? new ReliabilityOptions();
+if (reliabilityOptions.Enabled)
+{
+    builder.Services.AddSingleton(new ReliabilitySettings(reliabilityOptions));
+    builder.Services.AddSingleton<GrafanaClient>();
+    builder.Services.AddSingleton<ReliabilityCommentWriter>();
+    builder.Services.AddSingleton<ReliabilityPublisher>();
+    builder.Services.AddScoped<ReliabilityRepository>();
+    builder.Services.AddScoped<ReliabilityReportRunner>();
+    builder.Services.AddHostedService<ReliabilityReportService>();
+}
 
 builder.Services.AddDbContext<GaugeDbContext>(opt =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("Odecty")));

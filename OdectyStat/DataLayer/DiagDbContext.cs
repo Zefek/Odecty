@@ -18,6 +18,9 @@ public class DiagDbContext : DbContext
     public DbSet<DeviceDiagnostic> DeviceDiagnostics { get; set; }
     public DbSet<CameraConfig> CameraConfigs { get; set; }
     public DbSet<GarageCommand> GarageCommands { get; set; }
+    public DbSet<ReliabilityDailyMetric> ReliabilityDailyMetrics { get; set; }
+    public DbSet<ReliabilityDailyIssue> ReliabilityDailyIssues { get; set; }
+    public DbSet<ReliabilityDailyReport> ReliabilityDailyReports { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -245,6 +248,54 @@ public class DiagDbContext : DbContext
 
             entity.HasIndex(e => e.GaugeId, "ix_camera_config_gauge_id");
             entity.HasIndex(e => e.CfgHash, "ix_camera_config_cfg_hash");
+        });
+
+        modelBuilder.Entity<ReliabilityDailyMetric>(entity =>
+        {
+            entity.ToTable("reliability_daily_metric");
+            entity.HasKey(e => new { e.Day, e.Source, e.Metric, e.Key });
+
+            entity.Property(e => e.Day).HasColumnName("day");
+            entity.Property(e => e.Source).HasColumnName("source").HasMaxLength(100);
+            entity.Property(e => e.Metric).HasColumnName("metric").HasMaxLength(50);
+            entity.Property(e => e.Key).HasColumnName("key").HasMaxLength(300);
+            entity.Property(e => e.Value).HasColumnName("value");
+        });
+
+        modelBuilder.Entity<ReliabilityDailyIssue>(entity =>
+        {
+            entity.ToTable("reliability_daily_issue");
+            entity.HasKey(e => new { e.Day, e.Fingerprint });
+
+            entity.Property(e => e.Day).HasColumnName("day");
+            entity.Property(e => e.Fingerprint).HasColumnName("fingerprint").HasMaxLength(12);
+            entity.Property(e => e.Source).HasColumnName("source").HasMaxLength(100);
+            entity.Property(e => e.Level).HasColumnName("level").HasMaxLength(10);
+            entity.Property(e => e.Template).HasColumnName("template");
+            entity.Property(e => e.ExceptionType).HasColumnName("exception_type");
+            entity.Property(e => e.Location).HasColumnName("location");
+            entity.Property(e => e.Count).HasColumnName("count");
+            entity.Property(e => e.FirstTs).HasColumnName("first_ts");
+            entity.Property(e => e.LastTs).HasColumnName("last_ts");
+            entity.Property(e => e.Hourly).HasColumnName("hourly");
+            entity.Property(e => e.Details).HasColumnName("details").HasColumnType("jsonb");
+
+            entity.HasIndex(e => new { e.Fingerprint, e.Day }, "ix_reliability_daily_issue_fingerprint");
+        });
+
+        modelBuilder.Entity<ReliabilityDailyReport>(entity =>
+        {
+            entity.ToTable("reliability_daily_report");
+            entity.HasKey(e => e.Day);
+
+            entity.Property(e => e.Day).HasColumnName("day");
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(10);
+            entity.Property(e => e.Facts).HasColumnName("facts").HasColumnType("jsonb");
+            entity.Property(e => e.Comment).HasColumnName("comment");
+            entity.Property(e => e.CommentModel).HasColumnName("comment_model").HasMaxLength(100);
+            entity.Property(e => e.CommentTokensIn).HasColumnName("comment_tokens_in");
+            entity.Property(e => e.CommentTokensOut).HasColumnName("comment_tokens_out");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
         });
     }
 }
