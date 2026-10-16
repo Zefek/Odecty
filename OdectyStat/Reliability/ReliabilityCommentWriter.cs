@@ -12,6 +12,8 @@ public class ReliabilityCommentWriter
 {
     const string Template = "template";
     const string Placeholder = "[host]";
+    const string Level = "level";
+    const string Http5xx = "http_5xx";
 
     readonly ReliabilitySettings settings;
     readonly HttpClient http;
@@ -119,7 +121,7 @@ public class ReliabilityCommentWriter
     ReliabilityComment Fallback(JsonObject facts, List<string> attempts)
     {
         var lines = facts["highlights"]!.AsArray()
-            .Where(h => h!["level"]!.GetValue<string>() != ReliabilityReportBuilder.Info)
+            .Where(h => h![Level]!.GetValue<string>() != ReliabilityReportBuilder.Info)
             .Select(h => $"**{h!["source"]!.GetValue<string>()}:** {h["text"]!.GetValue<string>()}")
             .ToList();
         lines.Add(lines.Count == 0 ? "**Vše:** Bez upozornění." : "**Ostatní:** Bez dalších upozornění.");
@@ -170,7 +172,7 @@ public class ReliabilityCommentWriter
     {
         var problem = new JsonObject
         {
-            ["uroven"] = issue["level"]?.DeepClone(),
+            ["uroven"] = issue[Level]?.DeepClone(),
             ["pocet"] = issue["count"]?.DeepClone(),
             ["zprava"] = Cut(issue[Template]?.GetValue<string>(), 140),
         };
@@ -213,7 +215,7 @@ public class ReliabilityCommentWriter
         {
             Put(endpoint, "p95_prumer_7_dni_ms", route["p95_7d_ms"]?.DeepClone());
         }
-        endpoint["http_5xx"] = route["http_5xx"]?.DeepClone();
+        endpoint[Http5xx] = route[Http5xx]?.DeepClone();
         return endpoint;
     }
 
@@ -224,7 +226,7 @@ public class ReliabilityCommentWriter
             .Select(r => (JsonNode)Endpoint(r!, history))
             .ToArray() ?? []);
         var problems = new JsonArray(app["issues"]!.AsArray()
-            .Where(i => i!["level"]!.GetValue<string>() == ReliabilityReportBuilder.Error || i["count"]!.GetValue<int>() >= 10)
+            .Where(i => i![Level]!.GetValue<string>() == ReliabilityReportBuilder.Error || i["count"]!.GetValue<int>() >= 10)
             .Select(i => (JsonNode)Problem(i!, history))
             .ToArray());
         var application = new JsonObject
@@ -239,7 +241,7 @@ public class ReliabilityCommentWriter
         application["pozadavky"] = new JsonObject
         {
             ["celkem"] = requests?["total"]?.DeepClone(),
-            ["http_5xx"] = requests?["http_5xx"]?.DeepClone(),
+            [Http5xx] = requests?[Http5xx]?.DeepClone(),
             ["nejcastejsi"] = top,
         };
         application["vyjimky_runtime"] = app["exceptions"]?.DeepClone();
@@ -261,7 +263,7 @@ public class ReliabilityCommentWriter
             ["den"] = facts["day"]?.DeepClone(),
             ["upozorneni"] = new JsonArray(facts["highlights"]!.AsArray()
                 .Where(h => sources.Contains(h!["source"]!.GetValue<string>()))
-                .Select(h => (JsonNode)new JsonObject { ["uroven"] = h!["level"]?.DeepClone(), ["zdroj"] = h["source"]?.DeepClone(), ["text"] = h["text"]?.DeepClone() })
+                .Select(h => (JsonNode)new JsonObject { ["uroven"] = h![Level]?.DeepClone(), ["zdroj"] = h["source"]?.DeepClone(), ["text"] = h["text"]?.DeepClone() })
                 .ToArray()),
             ["aplikace"] = new JsonArray(facts["apps"]!.AsArray().Select(a => (JsonNode)Application(a!, history)).ToArray()),
         };

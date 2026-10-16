@@ -16,10 +16,10 @@ public class GrafanaClient
     {
         baseUrl = settings.GrafanaUrl;
         lokiUid = settings.Options.LokiUid;
-        http = new HttpClient { BaseAddress = new Uri(baseUrl + "/"), Timeout = TimeSpan.FromMinutes(3) };
+        http = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.Options.Token);
-        prometheus = $"api/datasources/proxy/uid/{settings.Options.PrometheusUid}/api/v1/";
-        loki = $"api/datasources/proxy/uid/{lokiUid}/loki/api/v1/";
+        prometheus = $"{baseUrl}/api/datasources/proxy/uid/{settings.Options.PrometheusUid}/api/v1/";
+        loki = $"{baseUrl}/api/datasources/proxy/uid/{lokiUid}/loki/api/v1/";
     }
 
     async Task<JsonArray> Get(string path, Dictionary<string, string> query)

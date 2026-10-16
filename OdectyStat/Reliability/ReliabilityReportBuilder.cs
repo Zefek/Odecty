@@ -38,6 +38,15 @@ public class ReliabilityReportBuilder
     const string Reboot = "reboot";
     const string Requests = "requests";
     const string Http5xx = "http_5xx";
+    const string Http4xx = "http_4xx";
+    const string UptimeMinutes = "uptime_minutes";
+    const string WifiReconnects = "wifi_reconnects";
+    const string MqttReconnects = "mqtt_reconnects";
+    const string MqttFailCount = "mqtt_fail_count";
+    const string OtaFailCount = "ota_fail_count";
+    const string SensorErrors = "sensor_errors";
+    const string LoopMaxMs = "loop_max_ms";
+    const string MinFreeHeapKb = "min_free_heap_kb";
     const string CountKey = "count";
     const string Route = "route";
     const string Top = "top";
@@ -172,7 +181,15 @@ public class ReliabilityReportBuilder
     {
         var routes = await RouteCounts();
         await RouteLatencies(routes);
+        await CollectHttp5xxHourly();
+        foreach (var app in settings.Apps)
+        {
+            AppRequests(app, routes.Where(r => r.Key.App == app).Select(r => r.Value).ToList());
+        }
+    }
 
+    async Task CollectHttp5xxHourly()
+    {
         var hourly = await grafana.PromRange($"sum by (job) (increase(http_server_request_duration_seconds_count{{job=~\"{jobs}\", http_response_status_code=~\"5..\"}}[1h]))", start.AddHours(1), end, 3600);
         foreach (var s in hourly)
         {
@@ -183,42 +200,47 @@ public class ReliabilityReportBuilder
             }
             http5xxHourly[Label(s, "job")] = arr;
         }
+    }
 
-        foreach (var app in settings.Apps)
+    void AppRequests(string app, List<JsonObject> appRoutes)
+    {
+        var total = appRoutes.Sum(r => r[CountKey]!.GetValue<double>());
+        var c4 = appRoutes.Sum(r => r[Http4xx]!.GetValue<double>());
+        var c5 = appRoutes.Sum(r => r[Http5xx]!.GetValue<double>());
+        Add(app, Requests, total);
+        Add(app, Http4xx, c4);
+        Add(app, Http5xx, c5);
+        var top = new JsonArray();
+        foreach (var stats in appRoutes.OrderByDescending(r => r[CountKey]!.GetValue<double>()))
         {
-            var appRoutes = routes.Where(r => r.Key.App == app).Select(r => r.Value).ToList();
-            var total = appRoutes.Sum(r => r[CountKey]!.GetValue<double>());
-            var c4 = appRoutes.Sum(r => r["http_4xx"]!.GetValue<double>());
-            var c5 = appRoutes.Sum(r => r[Http5xx]!.GetValue<double>());
-            Add(app, Requests, total);
-            Add(app, "http_4xx", c4);
-            Add(app, Http5xx, c5);
-            var top = new JsonArray();
-            foreach (var stats in appRoutes.OrderByDescending(r => r[CountKey]!.GetValue<double>()))
+            RouteMetrics(app, stats);
+            if (top.Count < 10)
             {
-                var route = stats[Route]!.GetValue<string>();
-                Add(app, "route_requests", stats[CountKey]!.GetValue<double>(), route);
-                if (stats["p95_ms"] is JsonNode p95)
-                {
-                    Add(app, "route_p95_ms", p95.GetValue<double>(), route);
-                    if (Avg7(app, "route_p95_ms", route) is double avg)
-                    {
-                        stats["p95_7d_ms"] = Math.Round(avg, 1);
-                    }
-                }
-                if (top.Count < 10)
-                {
-                    top.Add(stats.DeepClone());
-                }
+                top.Add(stats.DeepClone());
             }
-            App(app)[Requests] = new JsonObject
-            {
-                ["total"] = total,
-                ["http_4xx"] = c4,
-                [Http5xx] = c5,
-                ["http_5xx_hourly"] = http5xxHourly.TryGetValue(app, out var h) ? new JsonArray(h.Select(x => (JsonNode)x).ToArray()) : null,
-                [Top] = top,
-            };
+        }
+        App(app)[Requests] = new JsonObject
+        {
+            ["total"] = total,
+            [Http4xx] = c4,
+            [Http5xx] = c5,
+            ["http_5xx_hourly"] = http5xxHourly.TryGetValue(app, out var h) ? new JsonArray(h.Select(x => (JsonNode)x).ToArray()) : null,
+            [Top] = top,
+        };
+    }
+
+    void RouteMetrics(string app, JsonObject stats)
+    {
+        var route = stats[Route]!.GetValue<string>();
+        Add(app, "route_requests", stats[CountKey]!.GetValue<double>(), route);
+        if (stats["p95_ms"] is not JsonNode p95)
+        {
+            return;
+        }
+        Add(app, "route_p95_ms", p95.GetValue<double>(), route);
+        if (Avg7(app, "route_p95_ms", route) is double avg)
+        {
+            stats["p95_7d_ms"] = Math.Round(avg, 1);
         }
     }
 
@@ -238,13 +260,13 @@ public class ReliabilityReportBuilder
             var status = Label(s, "http_response_status_code");
             if (!routes.TryGetValue((app, route), out var stats))
             {
-                stats = new JsonObject { [Route] = route, [CountKey] = 0.0, ["http_4xx"] = 0.0, [Http5xx] = 0.0 };
+                stats = new JsonObject { [Route] = route, [CountKey] = 0.0, [Http4xx] = 0.0, [Http5xx] = 0.0 };
                 routes[(app, route)] = stats;
             }
             stats[CountKey] = stats[CountKey]!.GetValue<double>() + count;
             if (status.StartsWith('4'))
             {
-                stats["http_4xx"] = stats["http_4xx"]!.GetValue<double>() + count;
+                stats[Http4xx] = stats[Http4xx]!.GetValue<double>() + count;
             }
             if (status.StartsWith('5'))
             {
@@ -385,7 +407,7 @@ public class ReliabilityReportBuilder
     }
 
     string Fingerprint(params string[] parts) =>
-        Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes(string.Join("|", parts))))[..12].ToLowerInvariant();
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("|", parts))))[..12].ToLowerInvariant();
 
     string IssueQuery(ReliabilityIssue issue)
     {
@@ -507,33 +529,28 @@ public class ReliabilityReportBuilder
         {
             return null;
         }
-        string? fallback = null;
-        foreach (Match m in Regex.Matches(stacktrace, @"^\s*at (?<frame>[^\(\r\n]+)\([^\)\r\n]*\)(?: in (?<file>[^\r\n]+):line (?<line>\d+))?", RegexOptions.Multiline, regexTimeout))
-        {
-            var frame = m.Groups["frame"].Value.Trim();
-            var formatted = m.Groups["file"].Success ? $"{frame} ({Path.GetFileName(m.Groups["file"].Value)}:{m.Groups["line"].Value})" : frame;
-            fallback ??= formatted;
-            if (settings.OwnNamespaces.Any(ns => frame.StartsWith(ns + ".", StringComparison.Ordinal)))
-            {
-                return formatted;
-            }
-        }
-        return fallback;
+        var frames = Regex.Matches(stacktrace, @"^\s*at (?<frame>[^\(\r\n]+)\([^\)\r\n]*\)(?: in (?<file>[^\r\n]+):line (?<line>\d+))?", RegexOptions.Multiline, regexTimeout)
+            .Select(m => m.Groups)
+            .Select(g => (Frame: g["frame"].Value.Trim(), File: g["file"], Line: g["line"].Value))
+            .Select(f => (f.Frame, Formatted: f.File.Success ? $"{f.Frame} ({Path.GetFileName(f.File.Value)}:{f.Line})" : f.Frame))
+            .ToList();
+        var own = frames.FirstOrDefault(f => settings.OwnNamespaces.Any(ns => f.Frame.StartsWith(ns + ".", StringComparison.Ordinal)));
+        return own.Formatted ?? frames.Select(f => f.Formatted).FirstOrDefault();
     }
 
     async Task<List<DeviceDefinition>> DeviceDefinitions()
     {
         var definitions = new List<DeviceDefinition>
         {
-            new("heater", "heater_diagnostics", "true", "uptime_minutes", ["wifi_reconnects", "mqtt_reconnects", "sensor_errors"], ["loop_max_ms"], [], false),
-            new("lssensor", "ls_sensor_diagnostics", "true", "uptime_minutes", ["wifi_reconnects", "mqtt_fail_count", "ota_fail_count", "sampler_overruns"], ["loop_max_ms", "sampler_max_us"], ["sampler_stack_words"], true),
-            new("garage", "garage_diagnostics", "true", "uptime_minutes", ["wifi_reconnects", "mqtt_reconnects", "sensor_errors", "ota_fail_count", "door_cycles"], ["loop_max_ms"], [], true),
-            new("fve", "fve_diagnostics", "true", "uptime_minutes", ["wifi_reconnects", "mqtt_fail_count", "ota_fail_count", "bel_frame_errors", "load_dropouts"], ["loop_max_ms", "fan_mismatch_slots"], ["min_free_heap_kb"], true),
+            new("heater", "heater_diagnostics", "true", UptimeMinutes, [WifiReconnects, MqttReconnects, SensorErrors], [LoopMaxMs], [], false),
+            new("lssensor", "ls_sensor_diagnostics", "true", UptimeMinutes, [WifiReconnects, MqttFailCount, OtaFailCount, "sampler_overruns"], [LoopMaxMs, "sampler_max_us"], ["sampler_stack_words"], true),
+            new("garage", "garage_diagnostics", "true", UptimeMinutes, [WifiReconnects, MqttReconnects, SensorErrors, OtaFailCount, "door_cycles"], [LoopMaxMs], [], true),
+            new("fve", "fve_diagnostics", "true", UptimeMinutes, [WifiReconnects, MqttFailCount, OtaFailCount, "bel_frame_errors", "load_dropouts"], [LoopMaxMs, "fan_mismatch_slots"], [MinFreeHeapKb], true),
         };
         foreach (var gauge in await repository.CameraGauges(start))
         {
             definitions.Add(new($"camera-gauge{gauge}", "device_diagnostics", $"gauge_id = {gauge}", "uptime_seconds",
-                ["wifi_reconnects", "send_failures", "tls_errors", "ota_failures", "camera_errors", "capture_count"], ["loop_max_ms"], ["min_free_heap_kb"], true, gauge));
+                [WifiReconnects, "send_failures", "tls_errors", "ota_failures", "camera_errors", "capture_count"], [LoopMaxMs], [MinFreeHeapKb], true, gauge));
         }
         return definitions;
     }
@@ -621,32 +638,41 @@ public class ReliabilityReportBuilder
     {
         foreach (var app in settings.Apps)
         {
-            var json = App(app);
-            AvailabilityHighlight(app, json[Availability]?.GetValue<double>() ?? 0);
-            if (json[Restarts] is JsonArray restarts && restarts.Count > 0)
-            {
-                Highlight(Warn, app, $"{restarts.Count}x restart ({string.Join(", ", restarts.Select(r => r!.GetValue<string>()))})");
-            }
-            var requests = json[Requests]!.AsObject();
-            var c5 = requests[Http5xx]!.GetValue<double>();
-            if (c5 > 0)
-            {
-                var worst = requests[Top]!.AsArray().OrderByDescending(r => r![Http5xx]!.GetValue<double>()).FirstOrDefault();
-                Highlight(c5 >= 10 ? Warn : Info, app, $"{c5}x HTTP 5xx, nejvic {worst?[Route]} ({worst?[Http5xx]}x)");
-            }
-            foreach (var route in requests[Top]!.AsArray())
-            {
-                if (route!["p95_ms"]?.GetValue<double>() is double p95 && route["p95_7d_ms"]?.GetValue<double>() is double avg
-                    && route[CountKey]!.GetValue<double>() >= 20 && p95 > 200 && p95 > 2 * avg)
-                {
-                    Highlight(Warn, app, $"{route[Route]}: p95 {p95} ms (7 dni prumer {avg} ms)");
-                }
-            }
-            if (json[Exceptions]?.GetValue<double>() is double exceptions && json["exceptions_7d"]?.GetValue<double>() is double exAvg
-                && exceptions > 100 && exceptions > 2 * exAvg)
-            {
-                Highlight(Info, app, $"Vyjimek {exceptions} (7 dni prumer {exAvg})");
-            }
+            AppHighlights(app, App(app));
+        }
+    }
+
+    void AppHighlights(string app, JsonObject json)
+    {
+        AvailabilityHighlight(app, json[Availability]?.GetValue<double>() ?? 0);
+        if (json[Restarts] is JsonArray restarts && restarts.Count > 0)
+        {
+            Highlight(Warn, app, $"{restarts.Count}x restart ({string.Join(", ", restarts.Select(r => r!.GetValue<string>()))})");
+        }
+        var requests = json[Requests]!.AsObject();
+        var c5 = requests[Http5xx]!.GetValue<double>();
+        if (c5 > 0)
+        {
+            var worst = requests[Top]!.AsArray().OrderByDescending(r => r![Http5xx]!.GetValue<double>()).FirstOrDefault();
+            Highlight(c5 >= 10 ? Warn : Info, app, $"{c5}x HTTP 5xx, nejvic {worst?[Route]} ({worst?[Http5xx]}x)");
+        }
+        foreach (var route in requests[Top]!.AsArray())
+        {
+            LatencyHighlight(app, route!);
+        }
+        if (json[Exceptions]?.GetValue<double>() is double exceptions && json["exceptions_7d"]?.GetValue<double>() is double exAvg
+            && exceptions > 100 && exceptions > 2 * exAvg)
+        {
+            Highlight(Info, app, $"Vyjimek {exceptions} (7 dni prumer {exAvg})");
+        }
+    }
+
+    void LatencyHighlight(string app, JsonNode route)
+    {
+        if (route["p95_ms"]?.GetValue<double>() is double p95 && route["p95_7d_ms"]?.GetValue<double>() is double avg
+            && route[CountKey]!.GetValue<double>() >= 20 && p95 > 200 && p95 > 2 * avg)
+        {
+            Highlight(Warn, app, $"{route[Route]}: p95 {p95} ms (7 dni prumer {avg} ms)");
         }
     }
 
@@ -654,54 +680,65 @@ public class ReliabilityReportBuilder
     {
         foreach (var issue in Issues)
         {
-            var known = issueHistory.TryGetValue(issue.Fingerprint, out var hist);
-            var counts = Enumerable.Range(1, 7).Select(d => known && hist.Counts.TryGetValue(day.AddDays(-d), out var c) ? c : 0).Reverse().ToArray();
-            var avg = counts.Average();
-            var isNew = hasHistory && !known;
-            issue.Details["new"] = isNew;
-            issue.Details["first_seen_ever"] = known ? hist.FirstSeen.ToString(DayFormat, CultureInfo.InvariantCulture) : day.ToString(DayFormat, CultureInfo.InvariantCulture);
-            issue.Details["trend_7d"] = new JsonArray(counts.Select(c => (JsonNode)c).ToArray());
-            var what = issue.ExceptionType is { Length: > 0 } ex ? $"{ex}: {Shorten(issue.Template)}" : Shorten(issue.Template);
-            if (isNew)
-            {
-                Highlight(issue.Level == Error ? Warn : New, issue.Source, $"Novy {issue.Level}: {what} ({issue.Count}x)");
-            }
-            else if (hasHistory && issue.Count >= 10 && issue.Count > 3 * Math.Max(avg, 1))
-            {
-                Highlight(Warn, issue.Source, $"Roste {issue.Level}: {what} ({issue.Count}x, 7 dni prumer {Math.Round(avg, 1)})");
-            }
+            IssueHighlight(issue);
         }
     }
+
+    void IssueHighlight(ReliabilityIssue issue)
+    {
+        var known = issueHistory.TryGetValue(issue.Fingerprint, out var hist);
+        var counts = Enumerable.Range(1, 7).Select(d => known && hist.Counts.TryGetValue(day.AddDays(-d), out var c) ? c : 0).Reverse().ToArray();
+        var avg = counts.Average();
+        var isNew = hasHistory && !known;
+        issue.Details["new"] = isNew;
+        issue.Details["first_seen_ever"] = (known ? hist.FirstSeen : day).ToString(DayFormat, CultureInfo.InvariantCulture);
+        issue.Details["trend_7d"] = new JsonArray(counts.Select(c => (JsonNode)c).ToArray());
+        var what = issue.ExceptionType is { Length: > 0 } ex ? $"{ex}: {Shorten(issue.Template)}" : Shorten(issue.Template);
+        if (isNew)
+        {
+            Highlight(issue.Level == Error ? Warn : New, issue.Source, $"Novy {issue.Level}: {what} ({issue.Count}x)");
+        }
+        else if (hasHistory && issue.Count >= 10 && issue.Count > 3 * Math.Max(avg, 1))
+        {
+            Highlight(Warn, issue.Source, $"Roste {issue.Level}: {what} ({issue.Count}x, 7 dni prumer {Math.Round(avg, 1)})");
+        }
+    }
+
+    string JoinTexts(JsonNode? array, string separator = ", ") => string.Join(separator, array!.AsArray().Select(r => r!.GetValue<string>()));
 
     void BuildDeviceHighlights()
     {
         foreach (var device in devices)
         {
-            var name = device["name"]!.GetValue<string>();
-            if (device["offline_at_end"]?.GetValue<bool>() == true)
-            {
-                Highlight(Fail, name, $"Offline, naposledy {device["last_seen"]}");
-            }
-            if (device[Availability]?.GetValue<double>() is double availability)
-            {
-                AvailabilityHighlight(name, availability);
-            }
-            if (device["reboots"]?.GetValue<double>() is double reboots && reboots > 0)
-            {
-                Highlight(Warn, name, $"{reboots}x reboot ({string.Join(", ", device["reboot_times"]!.AsArray().Select(r => r!.GetValue<string>()))}), reset_reason {string.Join(", ", device["reset_reasons"]!.AsArray().Select(r => r!.GetValue<string>()))}");
-            }
-            if (device["fw_versions"] is JsonArray fw && fw.Count > 1)
-            {
-                Highlight(Info, name, $"Zmena firmwaru: {string.Join(" -> ", fw.Select(f => f!.GetValue<string>()))}");
-            }
-            if (device["rssi_min"]?.GetValue<double>() is double rssi && rssi < -80)
-            {
-                Highlight(Warn, name, $"Slaby signal, RSSI min {rssi} dBm");
-            }
-            if (device["recognition_ok_pct"]?.GetValue<double>() is double ok && Avg7(name, "recognition_ok_pct") is double okAvg && ok < okAvg - 10)
-            {
-                Highlight(Warn, name, $"Uspesnost rozpoznani {ok} % (7 dni prumer {Math.Round(okAvg, 1)} %)");
-            }
+            DeviceHighlights(device["name"]!.GetValue<string>(), device);
+        }
+    }
+
+    void DeviceHighlights(string name, JsonObject device)
+    {
+        if (device["offline_at_end"]?.GetValue<bool>() == true)
+        {
+            Highlight(Fail, name, $"Offline, naposledy {device["last_seen"]}");
+        }
+        if (device[Availability]?.GetValue<double>() is double availability)
+        {
+            AvailabilityHighlight(name, availability);
+        }
+        if (device["reboots"]?.GetValue<double>() is double reboots && reboots > 0)
+        {
+            Highlight(Warn, name, $"{reboots}x reboot ({JoinTexts(device["reboot_times"])}), reset_reason {JoinTexts(device["reset_reasons"])}");
+        }
+        if (device["fw_versions"] is JsonArray fw && fw.Count > 1)
+        {
+            Highlight(Info, name, $"Zmena firmwaru: {JoinTexts(fw, " -> ")}");
+        }
+        if (device["rssi_min"]?.GetValue<double>() is double rssi && rssi < -80)
+        {
+            Highlight(Warn, name, $"Slaby signal, RSSI min {rssi} dBm");
+        }
+        if (device["recognition_ok_pct"]?.GetValue<double>() is double ok && Avg7(name, "recognition_ok_pct") is double okAvg && ok < okAvg - 10)
+        {
+            Highlight(Warn, name, $"Uspesnost rozpoznani {ok} % (7 dni prumer {Math.Round(okAvg, 1)} %)");
         }
     }
 
