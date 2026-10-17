@@ -13,7 +13,7 @@ namespace OdectyStat1.Business
             this.context = context;
         }
 
-        public async Task<ICollection<GaugeMeasuerementStatistics>> Compute(int gaugeId)
+        public async Task<ICollection<GaugeMeasurementStatistics>> Compute(int gaugeId)
         {
             var lastStat = await context.MeasurementStatisticsRepository.GetLast(gaugeId);
             var measurement = await context.MeasurementRepository.Get(gaugeId, lastStat?.MeasurementDateTime);
@@ -21,7 +21,7 @@ namespace OdectyStat1.Business
             var day = lastStat?.MeasurementDateTime.Date.AddDays(2).AddSeconds(-1) ?? measurement.First().MeasurementDateTime.Date.AddDays(1).AddSeconds(-1);
             //6.5.2025 23:59:59
             var msrGrp = measurement.GroupBy(k => k.MeasurementDateTime.Date);
-            var lastStates = new List<GaugeMeasuerementStatistics>();
+            var lastStates = new List<GaugeMeasurementStatistics>();
             while (msrGrp.Any(k => k.Key > day))
             {
                 var currentDay = msrGrp.FirstOrDefault(k => k.Key == day.Date);
@@ -51,7 +51,7 @@ namespace OdectyStat1.Business
                 if (lastStat == null)
                 {
                     var consToEndDay = (consumptionPerMinute * (decimal)(day - currentDay.Last().MeasurementDateTime).TotalMinutes);
-                    lastStat = new GaugeMeasuerementStatistics
+                    lastStat = new GaugeMeasurementStatistics
                     {
                         MeasurementDateTime = day,
                         Value = currentDay.Last().CurrentValue - currentDay.First().CurrentValue + consToEndDay,
@@ -64,7 +64,7 @@ namespace OdectyStat1.Business
                 {
                     var minutesToEndDay = (day.Date.AddDays(1).AddSeconds(-1) - lastCurrentDayMeasurement.MeasurementDateTime).TotalMinutes;
                     var consumptionToEndDay = lastCurrentDayMeasurement.CurrentValue - lastStat.CurrentValue + ((decimal)minutesToEndDay * consumptionPerMinute);
-                    var ls = new GaugeMeasuerementStatistics
+                    var ls = new GaugeMeasurementStatistics
                     {
                         MeasurementDateTime = day,
                         Value = consumptionToEndDay,
@@ -82,7 +82,7 @@ namespace OdectyStat1.Business
                 {
                     var minutesToEndDay = (day - lastStat.MeasurementDateTime).TotalMinutes;
                     var consumptionToEndDay = (decimal)minutesToEndDay * consumptionPerMinute;
-                    var ls = new GaugeMeasuerementStatistics
+                    var ls = new GaugeMeasurementStatistics
                     {
                         MeasurementDateTime = day,
                         Value = consumptionToEndDay,

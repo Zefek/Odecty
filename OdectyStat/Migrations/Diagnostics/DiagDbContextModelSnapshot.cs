@@ -632,6 +632,144 @@ namespace OdectyStat1.Migrations.Diagnostics
                     b.ToTable("ls_sensor_diagnostics", (string)null);
                 });
 
+            modelBuilder.Entity("OdectyStat1.Business.ReliabilityDailyIssue", b =>
+                {
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<string>("Fingerprint")
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("fingerprint");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("integer")
+                        .HasColumnName("count");
+
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("details");
+
+                    b.Property<string>("ExceptionType")
+                        .HasColumnType("text")
+                        .HasColumnName("exception_type");
+
+                    b.Property<DateTime?>("FirstTs")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_ts");
+
+                    b.PrimitiveCollection<int[]>("Hourly")
+                        .IsRequired()
+                        .HasColumnType("integer[]")
+                        .HasColumnName("hourly");
+
+                    b.Property<DateTime?>("LastTs")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_ts");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("level");
+
+                    b.Property<string>("Location")
+                        .HasColumnType("text")
+                        .HasColumnName("location");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("Template")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("template");
+
+                    b.HasKey("Day", "Fingerprint");
+
+                    b.HasIndex(new[] { "Fingerprint", "Day" }, "ix_reliability_daily_issue_fingerprint");
+
+                    b.ToTable("reliability_daily_issue", (string)null);
+                });
+
+            modelBuilder.Entity("OdectyStat1.Business.ReliabilityDailyMetric", b =>
+                {
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("Metric")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("metric");
+
+                    b.Property<string>("Key")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("key");
+
+                    b.Property<double>("Value")
+                        .HasColumnType("double precision")
+                        .HasColumnName("value");
+
+                    b.HasKey("Day", "Source", "Metric", "Key");
+
+                    b.ToTable("reliability_daily_metric", (string)null);
+                });
+
+            modelBuilder.Entity("OdectyStat1.Business.ReliabilityDailyReport", b =>
+                {
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<string>("Comment")
+                        .HasColumnType("text")
+                        .HasColumnName("comment");
+
+                    b.Property<string>("CommentModel")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("comment_model");
+
+                    b.Property<int?>("CommentTokensIn")
+                        .HasColumnType("integer")
+                        .HasColumnName("comment_tokens_in");
+
+                    b.Property<int?>("CommentTokensOut")
+                        .HasColumnType("integer")
+                        .HasColumnName("comment_tokens_out");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Facts")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("facts");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("status");
+
+                    b.HasKey("Day");
+
+                    b.ToTable("reliability_daily_report", (string)null);
+                });
+
             modelBuilder.Entity("OdectyStat1.Business.TransferDiagnostic", b =>
                 {
                     b.Property<long>("Id")

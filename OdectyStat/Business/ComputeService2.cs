@@ -19,7 +19,7 @@ namespace OdectyStat1.Business
             var days = (await context.MeasurementDayRepository.GetDay(gaugeId)).OrderBy(k => k.MeasurementDateTime).ToList();
             for (int i = 0; i < days.Count; i++)
             {
-                GaugeMeasuerementStatistics nextDay = null;
+                GaugeMeasurementStatistics nextDay = null;
                 if (i < days.Count - 1)
                     nextDay = days.ElementAt(i + 1);
                 days.ElementAt(i).ComputeToEndDay(nextDay);
@@ -37,7 +37,7 @@ namespace OdectyStat1.Business
                     for (int j = 0; j < totalDays - 1; j++)
                     {
                         var newDay = i.AddDays(j);
-                        days.Add(new GaugeMeasuerementStatistics
+                        days.Add(new GaugeMeasurementStatistics
                         {
                             CurrentValue = value + consumption,
                             Value = consumption,
@@ -55,7 +55,7 @@ namespace OdectyStat1.Business
             Console.WriteLine("Hotovo");
         }
 
-        private GaugeMeasuerementStatistics FindNext(List<GaugeMeasuerementStatistics> measurements, DateTimeOffset from)
+        private GaugeMeasurementStatistics FindNext(List<GaugeMeasurementStatistics> measurements, DateTimeOffset from)
         {
             return measurements.FirstOrDefault(k => k.MeasurementDateTime.Date >= from.Date);
         }

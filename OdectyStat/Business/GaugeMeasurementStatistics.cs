@@ -4,8 +4,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace OdectyStat1.Entities
 {
-    [Table("GaugeMeasuerementStatistics")]
-    public class GaugeMeasuerementStatistics
+    [Table("GaugeMeasurementStatistics")]
+    public class GaugeMeasurementStatistics
     {
         [Key]
         public int Id { get; set; }
@@ -27,7 +27,7 @@ namespace OdectyStat1.Entities
         [NotMapped]
         public List<GaugeMeasurement> Measurements { get; set; } = new List<GaugeMeasurement>();
 
-        public void ComputeToEndDay(GaugeMeasuerementStatistics nextDay)
+        public void ComputeToEndDay(GaugeMeasurementStatistics nextDay)
         {
             var lastMasuremens = Measurements.OrderByDescending(k => k.CurrentValue).First();
             if (nextDay != null)
