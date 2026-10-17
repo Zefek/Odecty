@@ -360,9 +360,10 @@ public class ReliabilityCommentWriter
         pozadavky["nejcastejsi"] = top;
         application["pozadavky"] = pozadavky;
         application["vyjimky_runtime"] = app["exceptions"]?.DeepClone();
-        if (history)
+        if (history && app["exceptions"]?.GetValue<double>() is double exceptions && app["exceptions_7d"]?.GetValue<double>() is double average
+            && exceptions > 100 && exceptions > 2 * average)
         {
-            Put(application, "vyjimky_runtime_prumer_7_dni", app["exceptions_7d"]?.DeepClone());
+            application["vyjimky_runtime_prumer_7_dni"] = average;
         }
         application["logy"] = app["logs"]?.DeepClone();
         application["problemy"] = problems;
