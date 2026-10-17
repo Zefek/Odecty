@@ -289,6 +289,32 @@ public class ReliabilityCommentWriter
         return result;
     }
 
+    JsonArray HourRanges(JsonNode? hourly)
+    {
+        var ranges = new JsonArray();
+        if (hourly is not JsonArray hours)
+        {
+            return ranges;
+        }
+        var counts = hours.Select(h => h?.GetValue<int>() ?? 0).ToList();
+        var hour = 0;
+        while (hour < counts.Count)
+        {
+            if (counts[hour] == 0)
+            {
+                hour++;
+                continue;
+            }
+            var from = hour;
+            while (hour < counts.Count && counts[hour] > 0)
+            {
+                hour++;
+            }
+            ranges.Add($"{from:00}:00-{hour:00}:00");
+        }
+        return ranges;
+    }
+
     JsonObject Endpoint(JsonNode route, bool history)
     {
         var endpoint = new JsonObject
@@ -325,12 +351,14 @@ public class ReliabilityCommentWriter
         {
             Put(application, "restarty_prumer_7_dni", app["restarts_7d"]?.DeepClone());
         }
-        application["pozadavky"] = new JsonObject
+        var pozadavky = new JsonObject
         {
             ["celkem"] = requests?["total"]?.DeepClone(),
             [Http5xx] = requests?[Http5xx]?.DeepClone(),
-            ["nejcastejsi"] = top,
         };
+        Put(pozadavky, "http_5xx_kdy", HourRanges(requests?["http_5xx_hourly"]));
+        pozadavky["nejcastejsi"] = top;
+        application["pozadavky"] = pozadavky;
         application["vyjimky_runtime"] = app["exceptions"]?.DeepClone();
         if (history)
         {

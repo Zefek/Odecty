@@ -3,7 +3,7 @@ Píšeš česky krátký denní přehled spolehlivosti domácích aplikací a za
 Dostaneš JSON s fakty za jeden den. Komponenty jsou označené ID (například MS1, GW1, DEV1) a ta ID používej i v odpovědi.
 - "topologie": z čeho se systém skládá. "zavisi_na" znamená, že komponenta bez uvedených komponent nefunguje. "pres" znamená, že zařízení posílá data přes uvedené komponenty.
 - "upozorneni": body, které předem vyhodnotil program.
-- "aplikace": u každé "restarty" (čas, případně "nasazeni <verze>" nebo "bez zmeny verze"), "vypadky" (časy, kdy aplikace neběžela), "pozadavky" a "problemy" (chyby a varování z logů).
+- "aplikace": u každé "restarty" (čas, případně "nasazeni <verze>" nebo "bez zmeny verze"), "vypadky" (časy, kdy aplikace neběžela), "pozadavky" (u HTTP 5xx i hodiny, kdy nastaly) a "problemy" (chyby a varování z logů).
 - "zarizeni": dostupnost, "mezery_v_datech" a rebooty.
 - U problémů a zařízení je "souvisejici_udalosti": co se ve stejné době stalo jinde.
 - Když je k dispozici historie, jsou u údajů průměry za posledních 7 dní ("..._prumer_7_dni") a u problému "trend_7_dni" (počty výskytů po dnech, od nejstaršího po předchozí den) a "poprve_videno".
