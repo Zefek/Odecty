@@ -30,10 +30,23 @@ public class ReliabilityCommentWriter
         (@"(?i)\b(server|database|host|username|user id|password)(\s*[=:]\s*|\s+')(?!\{)[^;'\s]+", "$1$2[x]"),
     ];
 
+    readonly List<(Regex Pattern, string Id)> masks;
+    readonly Dictionary<string, string> names;
+    readonly Regex? idPattern;
+
     public ReliabilityCommentWriter(ReliabilitySettings settings)
     {
         this.settings = settings;
         http = new HttpClient { Timeout = TimeSpan.FromSeconds(settings.Options.Comment.TimeoutSeconds) };
+        var topology = settings.Options.Topology.Where(c => c.Id.Length > 0).ToList();
+        masks = topology
+            .SelectMany(c => c.Namespaces.Concat(c.Aliases).Append(c.Name).Where(n => n.Length > 0).Select(n => (Text: n, c.Id)))
+            .OrderByDescending(m => m.Text.Length)
+            .Select(m => (new Regex($@"(?<![\w-]){Regex.Escape(m.Text)}(?![a-z0-9_-])", RegexOptions.None, regexTimeout), m.Id))
+            .ToList();
+        names = topology.ToDictionary(c => c.Id, c => c.Name.Length > 0 ? c.Name : c.Id);
+        var prefixes = topology.Select(c => Regex.Replace(c.Id, @"\d+$", "", RegexOptions.None, regexTimeout)).Where(p => p.Length > 0).Distinct().Select(Regex.Escape).ToList();
+        idPattern = prefixes.Count > 0 ? new Regex($@"\b(?:{string.Join("|", prefixes)})\d+\b", RegexOptions.None, regexTimeout) : null;
     }
 
     public async Task<ReliabilityComment> Write(JsonObject facts)
@@ -58,7 +71,7 @@ public class ReliabilityCommentWriter
                     continue;
                 }
                 attempts.Add($"{model}: ok");
-                return new ReliabilityComment(text, model, tokensIn, tokensOut, attempts);
+                return new ReliabilityComment(Restore(text), model, tokensIn, tokensOut, attempts);
             }
             catch (Exception ex)
             {
@@ -115,7 +128,35 @@ public class ReliabilityCommentWriter
             return "chybi format **nadpis:**";
         }
         var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length;
-        return lines > 8 ? $"prilis mnoho radku ({lines})" : null;
+        if (lines > 8)
+        {
+            return $"prilis mnoho radku ({lines})";
+        }
+        var unknown = idPattern?.Matches(text).Select(m => m.Value).Where(id => !names.ContainsKey(id)).Distinct().ToList() ?? [];
+        if (unknown.Count > 0)
+        {
+            return $"nezname id {string.Join(", ", unknown)}";
+        }
+        var leaked = masks.FirstOrDefault(m => m.Pattern.IsMatch(text));
+        return leaked.Pattern != null ? $"obsahuje skutecny nazev ({leaked.Id})" : null;
+    }
+
+    string Restore(string text)
+    {
+        foreach (var (id, name) in names.OrderByDescending(n => n.Key.Length))
+        {
+            text = Regex.Replace(text, $@"\b{Regex.Escape(id)}\b", name, RegexOptions.None, regexTimeout);
+        }
+        return text;
+    }
+
+    string Mask(string text)
+    {
+        foreach (var (pattern, id) in masks)
+        {
+            text = pattern.Replace(text, id);
+        }
+        return text;
     }
 
     ReliabilityComment Fallback(JsonObject facts, List<string> attempts)
@@ -150,6 +191,7 @@ public class ReliabilityCommentWriter
 
     string AnonymizeText(string text)
     {
+        text = Mask(text);
         foreach (var (pattern, replacement) in anonymization)
         {
             text = Regex.Replace(text, pattern, replacement, RegexOptions.None, regexTimeout);
@@ -191,16 +233,60 @@ public class ReliabilityCommentWriter
             }
         }
         Put(problem, "podle_parametru", parameters);
-        var sample = issue["samples"]?.AsArray()
-            .Select(s => s?["exception_message"]?.GetValue<string>())
-            .FirstOrDefault(m => !string.IsNullOrEmpty(m));
-        Put(problem, "ukazka_chyby", Cut(sample, 160));
+        Put(problem, "ukazka_chyby", Sample(issue));
         if (history)
         {
             Put(problem, "trend_7_dni", issue["trend_7d"]?.DeepClone());
             Put(problem, "poprve_videno", issue["first_seen_ever"]?.DeepClone());
         }
         return problem;
+    }
+
+    string Sample(JsonNode issue)
+    {
+        var samples = issue["samples"]?.AsArray().Where(s => s != null).ToList() ?? [];
+        var exception = samples.Select(s => s!["exception_message"]?.GetValue<string>()).FirstOrDefault(m => !string.IsNullOrEmpty(m));
+        if (exception != null)
+        {
+            return Cut(exception, 160);
+        }
+        var message = samples.Select(s => s!["message"]?.GetValue<string>()).FirstOrDefault(m => !string.IsNullOrEmpty(m));
+        if (message == null || message == issue[Template]?.GetValue<string>())
+        {
+            return "";
+        }
+        return Cut(Regex.Replace(message, @"\s+", " ", RegexOptions.None, regexTimeout), 240);
+    }
+
+    JsonArray Topology() => new(settings.Options.Topology.Where(c => c.Id.Length > 0).Select(c =>
+    {
+        var component = new JsonObject { ["id"] = c.Id, ["typ"] = c.Kind };
+        Put(component, "role", c.Role);
+        Put(component, "zavisi_na", new JsonArray(c.DependsOn.Select(d => (JsonNode)d).ToArray()));
+        Put(component, "posila", c.Sends);
+        Put(component, "pres", new JsonArray(c.Via.Select(v => (JsonNode)v).ToArray()));
+        return (JsonNode)component;
+    }).ToArray());
+
+    JsonObject Device(JsonNode device)
+    {
+        var result = new JsonObject
+        {
+            ["id"] = device["name"]?.DeepClone(),
+            ["stav"] = device["status"]?.DeepClone(),
+        };
+        Put(result, "chyba_dotazu", device[ReliabilityReportBuilder.Error]?.DeepClone());
+        Put(result, "dostupnost_pct", device["availability_pct"]?.DeepClone());
+        Put(result, "mezery_v_datech", device["gaps"]?.DeepClone());
+        Put(result, "rebooty", device["reboot_times"]?.DeepClone());
+        Put(result, "reset_reason", device["reset_reasons"]?.DeepClone());
+        if (device["offline_at_end"]?.GetValue<bool>() == true)
+        {
+            result["offline_na_konci_dne"] = true;
+        }
+        Put(result, "rssi_min", device["rssi_min"]?.DeepClone());
+        Put(result, "souvisejici_udalosti", device["related"]?.DeepClone());
+        return result;
     }
 
     JsonObject Endpoint(JsonNode route, bool history)
@@ -231,9 +317,10 @@ public class ReliabilityCommentWriter
             .ToArray());
         var application = new JsonObject
         {
-            ["aplikace"] = app["name"]?.DeepClone(),
+            ["id"] = app["name"]?.DeepClone(),
             ["restarty"] = app["restarts"]?.DeepClone(),
         };
+        Put(application, "vypadky", app["outages"]?.DeepClone());
         if (history)
         {
             Put(application, "restarty_prumer_7_dni", app["restarts_7d"]?.DeepClone());
@@ -256,17 +343,15 @@ public class ReliabilityCommentWriter
 
     public JsonObject Condense(JsonObject facts)
     {
-        var sources = settings.Apps.Append("server").ToHashSet();
         var history = facts["history_available"]?.GetValue<bool>() == true;
-        var condensed = new JsonObject
-        {
-            ["den"] = facts["day"]?.DeepClone(),
-            ["upozorneni"] = new JsonArray(facts["highlights"]!.AsArray()
-                .Where(h => sources.Contains(h!["source"]!.GetValue<string>()))
-                .Select(h => (JsonNode)new JsonObject { ["uroven"] = h![Level]?.DeepClone(), ["zdroj"] = h["source"]?.DeepClone(), ["text"] = h["text"]?.DeepClone() })
-                .ToArray()),
-            ["aplikace"] = new JsonArray(facts["apps"]!.AsArray().Select(a => (JsonNode)Application(a!, history)).ToArray()),
-        };
+        var condensed = new JsonObject();
+        Put(condensed, "topologie", Topology());
+        condensed["den"] = facts["day"]?.DeepClone();
+        condensed["upozorneni"] = new JsonArray(facts["highlights"]!.AsArray()
+            .Select(h => (JsonNode)new JsonObject { ["uroven"] = h![Level]?.DeepClone(), ["zdroj"] = h["source"]?.DeepClone(), ["text"] = h["text"]?.DeepClone() })
+            .ToArray());
+        condensed["aplikace"] = new JsonArray(facts["apps"]!.AsArray().Select(a => (JsonNode)Application(a!, history)).ToArray());
+        Put(condensed, "zarizeni", new JsonArray(facts["devices"]?.AsArray().Select(d => (JsonNode)Device(d!)).ToArray() ?? []));
         return (JsonObject)Anonymize(condensed)!;
     }
 }

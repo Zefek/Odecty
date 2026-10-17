@@ -14,6 +14,7 @@ public class DeviceStats
     public List<DateTimeOffset> Reboots { get; } = new();
     public List<string> ResetReasons { get; } = new();
     public List<string> FwVersions { get; } = new();
+    public List<(DateTimeOffset From, DateTimeOffset To)> Gaps { get; } = new();
     public DateTimeOffset? LastSeen { get; set; }
     public bool OfflineAtEnd { get; set; }
 }
@@ -28,6 +29,8 @@ public class ReliabilityRepository
     }
 
     public bool UseHistory { get; set; } = true;
+
+    DateTimeOffset Utc(DateTime value) => new(DateTime.SpecifyKind(value, DateTimeKind.Utc));
 
     async Task<NpgsqlConnection> Connection()
     {
@@ -105,6 +108,10 @@ public class ReliabilityRepository
             med AS (
                 SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM ts - pts)) AS interval_s
                 FROM w WHERE pts IS NOT NULL
+            ),
+            g AS (
+                SELECT *, coalesce(extract(epoch FROM ts - pts) > 3 * (SELECT interval_s FROM med), false) AS gap
+                FROM w
             )
             SELECT count(*) AS rows,
                    max(ts) AS last_ts,
@@ -115,10 +122,11 @@ public class ReliabilityRepository
                    min(rssi) AS rssi_min,
                    avg(rssi) AS rssi_avg,
                    (SELECT interval_s FROM med) AS interval_s,
-                   coalesce(sum(extract(epoch FROM ts - greatest(pts, @from)) - (SELECT interval_s FROM med))
-                       FILTER (WHERE pts IS NOT NULL AND extract(epoch FROM ts - pts) > 3 * (SELECT interval_s FROM med)), 0) AS gap_s
+                   coalesce(sum(extract(epoch FROM ts - greatest(pts, @from)) - (SELECT interval_s FROM med)) FILTER (WHERE gap), 0) AS gap_s,
+                   coalesce(array_agg(greatest(pts, @from) ORDER BY ts) FILTER (WHERE gap), ARRAY[]::timestamptz[]) AS gap_from,
+                   coalesce(array_agg(ts ORDER BY ts) FILTER (WHERE gap), ARRAY[]::timestamptz[]) AS gap_to
                    {deltas} {maxima} {minima}
-            FROM w
+            FROM g
             WHERE ts >= @from
             """;
 
@@ -158,6 +166,9 @@ public class ReliabilityRepository
         {
             stats.Reboots.Add(new DateTimeOffset(DateTime.SpecifyKind(ts, DateTimeKind.Utc)));
         }
+        var gapFrom = reader.GetFieldValue<DateTime[]>(reader.GetOrdinal("gap_from"));
+        var gapTo = reader.GetFieldValue<DateTime[]>(reader.GetOrdinal("gap_to"));
+        stats.Gaps.AddRange(gapFrom.Zip(gapTo, (f, t) => (Utc(f), Utc(t))));
         stats.ResetReasons.AddRange(reader.GetFieldValue<string[]>(reader.GetOrdinal("reasons")));
         foreach (var version in reader.GetFieldValue<string[]>(reader.GetOrdinal("fws")))
         {

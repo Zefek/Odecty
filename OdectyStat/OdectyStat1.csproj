@@ -58,6 +58,7 @@
   </ItemGroup>
   <PropertyGroup>
     <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
+    <SourceRevisionId Condition="'$(GITHUB_SHA)' != ''">$(GITHUB_SHA)</SourceRevisionId>
   </PropertyGroup>
 
 </Project>

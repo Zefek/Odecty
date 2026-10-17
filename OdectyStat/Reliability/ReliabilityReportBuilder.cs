@@ -10,6 +10,7 @@ namespace OdectyStat1.Reliability;
 public record ReliabilityMetric(string Source, string Name, string Key, double Value);
 public record ReliabilityHighlight(string Level, string Source, string Text);
 record ReliabilityEvent(string Source, string Kind, DateTimeOffset Time);
+record ReliabilityOutage(string Source, DateTimeOffset From, DateTimeOffset To);
 
 public class ReliabilityIssue
 {
@@ -71,6 +72,8 @@ public class ReliabilityReportBuilder
     readonly Dictionary<string, JsonObject> apps = new();
     readonly List<JsonObject> devices = new();
     readonly List<ReliabilityEvent> events = new();
+    readonly List<ReliabilityOutage> outages = new();
+    readonly Dictionary<string, List<(DateTimeOffset From, DateTimeOffset To)>> deviceGaps = new();
     readonly Dictionary<string, int[]> http5xxHourly = new();
     readonly TimeSpan regexTimeout = TimeSpan.FromSeconds(1);
     Dictionary<(string Source, string Name, string Key), double> history = new();
@@ -319,39 +322,96 @@ public class ReliabilityReportBuilder
 
     async Task CollectAvailability()
     {
-        var buckets = (int)(seconds / 300);
-        var series = await grafana.PromRange($"count by (job, instance) (count_over_time(target_info{{job=~\"{jobs}\"}}[5m]))", start.AddMinutes(5), end, 300);
+        var series = await grafana.PromRange($"count by (job, instance, service_version) (count_over_time(target_info{{job=~\"{jobs}\"}}[5m]))", start.AddMinutes(5), end, 300);
         foreach (var app in settings.Apps)
         {
-            var covered = new HashSet<long>();
-            var restartTimes = new List<DateTimeOffset>();
-            foreach (var s in series.Where(s => Label(s, "job") == app))
-            {
-                var values = s![Values]!.AsArray();
-                foreach (var v in values)
-                {
-                    covered.Add(Ts(v).ToUnixTimeSeconds());
-                }
-                var first = Ts(values[0]);
-                if (first > start.AddMinutes(10))
-                {
-                    restartTimes.Add(first.AddMinutes(-5));
-                }
-            }
-            restartTimes.Sort();
-            events.AddRange(restartTimes.Select(r => new ReliabilityEvent(app, Restart, r)));
-            var restarts = new JsonArray(restartTimes.Select(r => (JsonNode)Local(r)).ToArray());
-            var availability = Math.Round(100.0 * Math.Min(covered.Count, buckets) / buckets, 2);
-            Add(app, Availability, availability);
-            Add(app, Restarts, restarts.Count);
-            if (Avg7(app, Restarts) is double restartsAvg)
-            {
-                App(app)["restarts_7d"] = Math.Round(restartsAvg, 1);
-            }
-            App(app)[Availability] = availability;
-            App(app)[Restarts] = restarts;
+            var instances = series.Where(s => Label(s, "job") == app)
+                .Select(s => (Version: Label(s, "service_version"), Times: s![Values]!.AsArray().Select(Ts).ToList()))
+                .Where(i => i.Times.Count > 0)
+                .OrderBy(i => i.Times[0])
+                .ToList();
+            AppAvailability(app, instances);
         }
     }
+
+    void AppAvailability(string app, List<(string Version, List<DateTimeOffset> Times)> instances)
+    {
+        var restarts = new JsonArray();
+        string? previous = null;
+        foreach (var (version, times) in instances)
+        {
+            if (times[0] > start.AddMinutes(10))
+            {
+                var restart = times[0].AddMinutes(-5);
+                events.Add(new ReliabilityEvent(app, Restart, restart));
+                restarts.Add(Local(restart) + RestartNote(previous, version));
+            }
+            previous = version;
+        }
+        var covered = instances.SelectMany(i => i.Times).Select(t => t.ToUnixTimeSeconds()).ToHashSet();
+        var gaps = Gaps(covered);
+        outages.AddRange(gaps.Select(g => new ReliabilityOutage(app, g.From, g.To)));
+        var buckets = (int)(seconds / 300);
+        var availability = Math.Round(100.0 * Math.Min(covered.Count, buckets) / buckets, 2);
+        Add(app, Availability, availability);
+        Add(app, Restarts, restarts.Count);
+        if (Avg7(app, Restarts) is double restartsAvg)
+        {
+            App(app)["restarts_7d"] = Math.Round(restartsAvg, 1);
+        }
+        App(app)[Availability] = availability;
+        App(app)[Restarts] = restarts;
+        App(app)["outages"] = new JsonArray(gaps.Select(g => (JsonNode)Interval(g.From, g.To)).ToArray());
+    }
+
+    string RestartNote(string? previous, string version)
+    {
+        if (version.Length == 0)
+        {
+            return "";
+        }
+        if (previous == null)
+        {
+            return $" verze {ShortVersion(version)}";
+        }
+        return previous == version ? " bez zmeny verze" : $" nasazeni {ShortVersion(version)}";
+    }
+
+    string ShortVersion(string version)
+    {
+        var plus = version.IndexOf('+');
+        if (plus < 0)
+        {
+            return version;
+        }
+        var revision = version[(plus + 1)..];
+        return revision.Length > 7 ? revision[..7] : revision;
+    }
+
+    List<(DateTimeOffset From, DateTimeOffset To)> Gaps(HashSet<long> covered)
+    {
+        var gaps = new List<(DateTimeOffset From, DateTimeOffset To)>();
+        DateTimeOffset? gapStart = null;
+        for (var t = start.AddMinutes(5); t <= end; t = t.AddMinutes(5))
+        {
+            if (!covered.Contains(t.ToUnixTimeSeconds()))
+            {
+                gapStart ??= t.AddMinutes(-5);
+            }
+            else if (gapStart is DateTimeOffset from)
+            {
+                gaps.Add((from, t.AddMinutes(-5)));
+                gapStart = null;
+            }
+        }
+        if (gapStart is DateTimeOffset open)
+        {
+            gaps.Add((open, end));
+        }
+        return gaps;
+    }
+
+    string Interval(DateTimeOffset from, DateTimeOffset to) => $"{Local(from)}-{Local(to)}";
 
     async Task CollectLogs()
     {
@@ -583,6 +643,12 @@ public class ReliabilityReportBuilder
             json["reset_reasons"] = new JsonArray(device.ResetReasons.Select(r => (JsonNode)r).ToArray());
             json["fw_versions"] = new JsonArray(device.FwVersions.Select(r => (JsonNode)r).ToArray());
             json["offline_at_end"] = device.OfflineAtEnd;
+            if (device.OfflineAtEnd && device.LastSeen is DateTimeOffset lastSeen)
+            {
+                device.Gaps.Add((lastSeen, end));
+            }
+            deviceGaps[name] = device.Gaps;
+            json["gaps"] = new JsonArray(device.Gaps.Take(10).Select(g => (JsonNode)Interval(g.From, g.To)).ToArray());
 
             if (definition.Gauge is int g)
             {
@@ -600,25 +666,50 @@ public class ReliabilityReportBuilder
     {
         foreach (var issue in Issues)
         {
-            var related = new JsonArray();
-            var hours = Enumerable.Range(0, 24).Where(h => issue.Hourly[h] > 0).ToHashSet();
-            foreach (var e in events.Where(e => e.Source != issue.Source || e.Kind == Restart).OrderBy(e => e.Time))
+            issue.Details["related"] = IssueRelated(issue);
+        }
+        foreach (var device in devices.Where(d => d["gaps"] is JsonArray { Count: > 0 }))
+        {
+            DeviceRelated(device);
+        }
+    }
+
+    JsonArray IssueRelated(ReliabilityIssue issue)
+    {
+        var related = new JsonArray();
+        var hours = Enumerable.Range(0, 24).Where(h => issue.Hourly[h] > 0).ToHashSet();
+        bool Near(DateTimeOffset from, DateTimeOffset to) =>
+            hours.Any(h => start.AddHours(h - 1) < to && start.AddHours(h + 2) > from);
+        foreach (var o in outages.Where(o => Near(o.From, o.To)).OrderBy(o => o.From))
+        {
+            related.Add($"{o.Source}: nedostupny {Interval(o.From, o.To)}");
+        }
+        foreach (var e in events.Where(e => (e.Source != issue.Source || e.Kind == Restart) && Near(e.Time, e.Time)).OrderBy(e => e.Time))
+        {
+            related.Add($"{e.Source}: {e.Kind} {Local(e.Time)}");
+        }
+        foreach (var (app, hourly) in http5xxHourly)
+        {
+            var overlap = hours.Sum(h => hourly[h]);
+            if (overlap > 0)
             {
-                var h = (int)Math.Floor((e.Time - start).TotalHours);
-                if (hours.Contains(h) || hours.Contains(h - 1) || hours.Contains(h + 1))
-                {
-                    related.Add($"{e.Source}: {e.Kind} {Local(e.Time)}");
-                }
+                related.Add($"{app}: {overlap}x HTTP 5xx ve stejnych hodinach");
             }
-            foreach (var (app, hourly) in http5xxHourly)
-            {
-                var overlap = hours.Sum(h => hourly[h]);
-                if (overlap > 0)
-                {
-                    related.Add($"{app}: {overlap}x HTTP 5xx ve stejnych hodinach");
-                }
-            }
-            issue.Details["related"] = related;
+        }
+        return related;
+    }
+
+    void DeviceRelated(JsonObject device)
+    {
+        var gaps = deviceGaps[device["name"]!.GetValue<string>()];
+        var related = outages
+            .Where(o => gaps.Any(g => g.From < o.To.AddMinutes(10) && g.To > o.From.AddMinutes(-10)))
+            .OrderBy(o => o.From)
+            .Select(o => (JsonNode)$"{o.Source}: nedostupny {Interval(o.From, o.To)}")
+            .ToArray();
+        if (related.Length > 0)
+        {
+            device["related"] = new JsonArray(related);
         }
     }
 

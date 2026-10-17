@@ -11,8 +11,22 @@ public class ReliabilityOptions
     public string LokiUid { get; set; } = "cfj3ab0umk0zke";
     public List<string> Apps { get; set; } = new();
     public List<string> OwnNamespaces { get; set; } = new();
+    public List<ReliabilityComponent> Topology { get; set; } = new();
     public ReliabilityCommentOptions Comment { get; set; } = new();
     public ReliabilityHomeAssistantOptions HomeAssistant { get; set; } = new();
+}
+
+public class ReliabilityComponent
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Kind { get; set; } = "";
+    public string? Role { get; set; }
+    public List<string> DependsOn { get; set; } = new();
+    public string? Sends { get; set; }
+    public List<string> Via { get; set; } = new();
+    public List<string> Aliases { get; set; } = new();
+    public List<string> Namespaces { get; set; } = new();
 }
 
 public class ReliabilityCommentOptions

@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,7 @@ using OdectyStat1.HealthChecks;
 using OdectyStat1.Reliability;
 
 const string ServiceName = "OdectyStat";
+var serviceVersion = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
 
 if (args.Length > 0 && args[0] == "reliability")
 {
@@ -34,12 +36,12 @@ builder.Logging.AddOpenTelemetry(opt =>
     opt.IncludeFormattedMessage = true;
     opt.IncludeScopes = true;
     opt.ParseStateValues = true;
-    opt.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(ServiceName));
+    opt.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(ServiceName, serviceVersion: serviceVersion));
     opt.AddOtlpExporter(o => o.Endpoint = otlpEndpoint);
 });
 
 builder.Services.AddOpenTelemetry()
-    .ConfigureResource(r => r.AddService(ServiceName))
+    .ConfigureResource(r => r.AddService(ServiceName, serviceVersion: serviceVersion))
     .WithTracing(t => t
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
