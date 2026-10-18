@@ -17,14 +17,17 @@ namespace OdectyStat1.Business
         public GaugeMeasurement? LastMeasurement { get; set; }
         public decimal? MaxValuePerHour { get; set; }
         public decimal InitialValue { get; set; }
+        public decimal PriceUnitFactor { get; set; }
+        public decimal EnergyFactor { get; set; }
 
         public ICollection<GaugeMeasurement> Measurements { get; set; } = new List<GaugeMeasurement>();
-        public ICollection<GaugeMeasuerementStatistics> MeasurementsStatistics { get; set; } = new List<GaugeMeasuerementStatistics>();
+        public ICollection<GaugeMeasurementStatistics> MeasurementsStatistics { get; set; } = new List<GaugeMeasurementStatistics>();
         public int? HomeassistantId { get; internal set; }
 
         public void SetNewValue(decimal newValue, DateTime datetime, string? imagePath = null, decimal? confidence = null)
         {
-            if(LastMeasurement != null && newValue == LastMeasurement.CurrentValue)
+            var sameValue = LastMeasurement != null && newValue == LastMeasurement.CurrentValue;
+            if (sameValue && datetime.Date == LastMeasurement!.MeasurementDateTime.Date)
             {
                 LastMeasurement.LastMeasurementDateTime = datetime;
                 // Hodnota se nezměnila, ale pokud má nové čtení vyšší confidence,
@@ -38,11 +41,11 @@ namespace OdectyStat1.Business
                 return;
             }
             var increment = newValue - LastValue;
-            if (increment > 0)
+            if (increment > 0 || sameValue)
             {
                 Measurements.Add(new GaugeMeasurement
                 {
-                    Value = increment,
+                    Value = sameValue ? 0 : increment,
                     MeasurementDateTime = datetime,
                     LastMeasurementDateTime = datetime,
                     CurrentValue = newValue,
@@ -60,7 +63,7 @@ namespace OdectyStat1.Business
             LastValue = newValue;
         }
 
-        public void SetStatistics(IEnumerable<GaugeMeasuerementStatistics> statistics)
+        public void SetStatistics(IEnumerable<GaugeMeasurementStatistics> statistics)
         {
             var stats = MeasurementsStatistics.Where(k => k.GaugeId == statistics.First().GaugeId).AsEnumerable().Where(k => k.MeasurementDateTime >= statistics.Min(k => k.MeasurementDateTime) && k.MeasurementDateTime <= statistics.Max(k => k.MeasurementDateTime)).ToList();
             foreach (var stat in stats)

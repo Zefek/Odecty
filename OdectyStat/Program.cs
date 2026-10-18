@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
@@ -12,8 +13,16 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using OdectyStat1.HealthChecks;
+using OdectyStat1.Reliability;
 
 const string ServiceName = "OdectyStat";
+var serviceVersion = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+
+if (args.Length > 0 && args[0] == "reliability")
+{
+    Environment.ExitCode = await new ReliabilityCli().Run(args[1..]);
+    return;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,12 +36,12 @@ builder.Logging.AddOpenTelemetry(opt =>
     opt.IncludeFormattedMessage = true;
     opt.IncludeScopes = true;
     opt.ParseStateValues = true;
-    opt.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(ServiceName));
+    opt.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(ServiceName, serviceVersion: serviceVersion));
     opt.AddOtlpExporter(o => o.Endpoint = otlpEndpoint);
 });
 
 builder.Services.AddOpenTelemetry()
-    .ConfigureResource(r => r.AddService(ServiceName))
+    .ConfigureResource(r => r.AddService(ServiceName, serviceVersion: serviceVersion))
     .WithTracing(t => t
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
@@ -43,7 +52,6 @@ builder.Services.AddOpenTelemetry()
         .AddHttpClientInstrumentation()
         .AddRuntimeInstrumentation()
         .AddMeter("Npgsql")
-        .AddMeter("Microsoft.Data.SqlClient.EventSource")
         .AddOtlpExporter(o => o.Endpoint = otlpEndpoint));
 
 builder.Services.Configure<OdectySettings>(builder.Configuration.GetSection("OdectySettings"));
@@ -68,9 +76,23 @@ builder.Services.AddScoped<IOtaNotificationService, OtaNotificationService>();
 builder.Services.AddSingleton<GarageHandshakeStore>();
 builder.Services.AddSingleton<IGarageCommandSigner, GarageCommandSigner>();
 builder.Services.AddScoped<IGarageCommandService, GarageCommandService>();
+builder.Services.Configure<MqttSettings>(builder.Configuration.GetSection("Mqtt"));
+builder.Services.AddSingleton<MqttPublisher>();
+
+var reliabilityOptions = builder.Configuration.GetSection("Reliability").Get<ReliabilityOptions>() ?? new ReliabilityOptions();
+if (reliabilityOptions.Enabled)
+{
+    builder.Services.AddSingleton(new ReliabilitySettings(reliabilityOptions));
+    builder.Services.AddSingleton<GrafanaClient>();
+    builder.Services.AddSingleton<ReliabilityCommentWriter>();
+    builder.Services.AddSingleton<ReliabilityPublisher>();
+    builder.Services.AddScoped<ReliabilityRepository>();
+    builder.Services.AddScoped<ReliabilityReportRunner>();
+    builder.Services.AddHostedService<ReliabilityReportService>();
+}
 
 builder.Services.AddDbContext<GaugeDbContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("Odecty")));
+    opt.UseNpgsql(builder.Configuration.GetConnectionString("Odecty")));
 builder.Services.AddDbContext<HomeAssistantDbContext>(opt =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("HomeAssistant")));
 builder.Services.AddDbContext<DiagDbContext>(opt =>
@@ -93,9 +115,9 @@ builder.Services.AddSingleton<IBinaryMessageHandler, GarageChallengeHandler>();
 builder.Services.AddSingleton<IBinaryMessageHandler, GarageResultHandler>();
 
 builder.Services.AddHealthChecks()
-    .AddSqlServer(
+    .AddNpgSql(
         connectionString: builder.Configuration.GetConnectionString("Odecty")!,
-        name: "sqlserver-odecty",
+        name: "postgres-odecty",
         tags: new[] { "ready" })
     .AddNpgSql(
         connectionString: builder.Configuration.GetConnectionString("HomeAssistant")!,

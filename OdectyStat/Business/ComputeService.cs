@@ -72,10 +72,10 @@ namespace OdectyStat1
             {
                 ordered.ElementAt(i).Value = ordered.ElementAt(i).CurrentValue - ordered.ElementAt(i - 1).CurrentValue;
             }
-            var stat = new List<GaugeMeasuerementStatistics>();
+            var stat = new List<GaugeMeasurementStatistics>();
             foreach (var order in ordered)
             {
-                stat.Add(new GaugeMeasuerementStatistics
+                stat.Add(new GaugeMeasurementStatistics
                 {
                     CurrentValue = (decimal)order.CurrentValue,
                     GaugeId = order.GaugeId,
