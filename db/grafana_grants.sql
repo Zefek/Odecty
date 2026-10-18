@@ -9,6 +9,10 @@ GRANT SELECT ON public.ls_sensor_diagnostics TO grafana;
 GRANT SELECT ON public.garage_diagnostics    TO grafana;
 GRANT SELECT ON public.fve_diagnostics       TO grafana;
 
+GRANT SELECT ON public.reliability_metric    TO grafana;
+GRANT SELECT ON public.reliability_issue     TO grafana;
+GRANT SELECT ON public.reliability_report    TO grafana;
+
 -- Optional: auto-grant SELECT on any future table created in the public schema
 -- by the role that owns the existing tables (replace <owner_role>). Useful if
 -- you add more diagnostic tables later and want grafana to pick them up
