@@ -2,7 +2,7 @@
   "title": "Energie: vyúčtování a predikce",
   "uid": "odecty-energie",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "tags": [
     "energie",
@@ -451,7 +451,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "${ds}"
       },
-      "description": "Přímka = průměrná denní spotřeba minulého období × den období. Skutečnost = kumulovaná spotřeba z denních statistik. Predikce = skutečnost a dál průměr stejných dnů posledních 3 let.",
+      "description": "Přímky = průměrná denní spotřeba období × den období: minulé období, období s nejnižší a nejvyšší denní spotřebou a průměr všech zúčtovacích období (celková spotřeba / celkový počet dní). Skutečnost = kumulovaná spotřeba z denních statistik. Predikce = skutečnost a dál průměr stejných dnů posledních 3 let.",
       "gridPos": {
         "h": 10,
         "w": 24,
@@ -493,6 +493,68 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "Průměrné tempo"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tempo nejnižšího období"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dot",
+                  "dash": [
+                    0,
+                    6
+                  ]
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tempo nejvyššího období"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dot",
+                  "dash": [
+                    0,
+                    6
+                  ]
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "Tempo minulého období"
             },
             "properties": [
@@ -501,6 +563,51 @@
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "#8F8F8F"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tempo nejnižšího období"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#73BF69"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tempo nejvyššího období"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2495C"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Průměrné tempo"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FADE2A"
                 }
               }
             ]
@@ -557,7 +664,7 @@
           "format": "time_series",
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "SELECT \"Day\"::timestamp AS time, \"ExpectedCumulative\" AS \"Tempo minulého období\", \"ActualCumulative\" AS \"Skutečnost\", \"ForecastCumulative\" AS \"Predikce\" FROM \"GaugeBillingDaily\" WHERE \"GaugeId\" = $gauge ORDER BY 1"
+          "rawSql": "SELECT d.\"Day\"::timestamp AS time, d.\"ExpectedCumulative\" AS \"Tempo minulého období\", s.\"MinDailyValue\" * d.\"DayIndex\" AS \"Tempo nejnižšího období\", s.\"MaxDailyValue\" * d.\"DayIndex\" AS \"Tempo nejvyššího období\", s.\"AvgDailyValue\" * d.\"DayIndex\" AS \"Průměrné tempo\", d.\"ActualCumulative\" AS \"Skutečnost\", d.\"ForecastCumulative\" AS \"Predikce\" FROM \"GaugeBillingDaily\" d LEFT JOIN \"GaugeBillingSpread\" s ON s.\"GaugeId\" = d.\"GaugeId\" WHERE d.\"GaugeId\" = $gauge ORDER BY 1"
         }
       ]
     },
@@ -680,6 +787,133 @@
       ]
     },
     {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Denní spotřeba podle zúčtovacích období",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${ds}"
+      },
+      "description": "Průměrná denní spotřeba každého zúčtovacího období (spotřeba / počet dní), sloupec je na začátku období. Průměr všech období = celková spotřeba / celkový počet dní. Aktuální období = skutečnost a predikce do konce období / počet dní.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 80,
+            "showPoints": "never",
+            "spanNulls": false,
+            "barAlignment": 0
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Průměr všech období"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Denní spotřeba období"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3274D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Průměr všech období"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FADE2A"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Aktuální období (odhad)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8AB8FF"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${ds}"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT p.\"PeriodFrom\"::timestamp AS time, p.\"DailyValue\" AS \"Denní spotřeba období\", s.\"AvgDailyValue\" AS \"Průměr všech období\", NULL::numeric AS \"Aktuální období (odhad)\" FROM \"GaugeBillingPeriodStats\" p JOIN \"GaugeBillingSpread\" s ON s.\"GaugeId\" = p.\"GaugeId\" WHERE p.\"GaugeId\" = $gauge UNION ALL SELECT f.\"PeriodFrom\"::timestamp, NULL, s.\"AvgDailyValue\", f.\"TotalValue\" / f.\"DaysTotal\" FROM \"GaugeBillingForecast\" f JOIN \"GaugeBillingSpread\" s ON s.\"GaugeId\" = f.\"GaugeId\" WHERE f.\"GaugeId\" = $gauge ORDER BY 1"
+        }
+      ],
+      "timeFrom": "10y"
+    },
+    {
       "id": 10,
       "type": "row",
       "title": "Měsíční náklady: $gauge_name",
@@ -687,7 +921,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 35
       },
       "collapsed": false,
       "panels": []
@@ -705,7 +939,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -786,7 +1020,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 45
       },
       "collapsed": false,
       "panels": []
@@ -804,7 +1038,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 46
       },
       "fieldConfig": {
         "defaults": {
