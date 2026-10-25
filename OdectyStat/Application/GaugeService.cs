@@ -160,10 +160,14 @@ namespace OdectyStat1.Application
             }
             var localDateTime = dateTime.ToLocalTime();
             bool valid = false;
+            string rejectReason = "unknown";
+            decimal rejectPrevValue = gauge.LastValue;
+            decimal? rejectMaxAllowedIncrement = null;
             var initialDiff = GetDiff(value, gauge.LastValue, out var initialCorrected);
             if (gauge.LastMeasurement != null)
             {
                 var prevValue = gauge.LastMeasurement.CurrentValue;
+                rejectPrevValue = prevValue;
                 if (gauge.LastMeasurement.CurrentValue == value)
                 {
                     valid = true;
@@ -171,7 +175,11 @@ namespace OdectyStat1.Application
                 else
                 {
                     var timeDiff = localDateTime - gauge.LastMeasurement.LastMeasurementDateTime;
-                    if (timeDiff.TotalHours > 0 && gauge.MaxValuePerHour.HasValue)
+                    if (timeDiff.TotalHours <= 0 || !gauge.MaxValuePerHour.HasValue)
+                    {
+                        rejectReason = "no time window or limit";
+                    }
+                    else
                     {
                         var maxAllowedIncrement = gauge.MaxValuePerHour.Value * (decimal)timeDiff.TotalHours;
                         var diff = GetDiff(value, prevValue, out var corrected);
@@ -182,7 +190,8 @@ namespace OdectyStat1.Application
                         }
                         else
                         {
-                            logger.LogWarning("Recognized value {value} exceeds maximum allowed increment {maxAllowedIncrement} for gauge {gaugeId}.", value, maxAllowedIncrement, gaugeId);
+                            rejectReason = diff < 0 ? "decrease" : "exceeds maximum allowed increment";
+                            rejectMaxAllowedIncrement = maxAllowedIncrement;
                             valid = false;
 
                             if (TryCorrectDials(value, prevValue, out var dialCorrected))
@@ -231,7 +240,7 @@ namespace OdectyStat1.Application
                 }
                 else
                 {
-                    logger.LogWarning("Recognized value {value} is less than last value {lastValue} for gauge {gaugeId}. Marking as failed.", value, gauge.LastValue, gaugeId);
+                    rejectReason = "decrease";
                     valid = false;
                 }
             }
@@ -262,7 +271,7 @@ namespace OdectyStat1.Application
                     gauge.LastMeasurement.LastMeasurementDateTime = localDateTime;
                     await context.SaveChangesAsync();
                 }
-                logger.LogWarning("Could not validate recognized value {value} for gauge {gaugeId}. Marking as failed.", value, gaugeId);
+                logger.LogWarning("Rejected recognized value {value} for gauge {gaugeId}: {reason}, previous value {prevValue}, max allowed increment {maxAllowedIncrement}. Marking as failed.", recognizedValue, gaugeId, rejectReason, rejectPrevValue, rejectMaxAllowedIncrement);
                 destPath = MoveFile(gaugeId, imagePath, newFileName, dateFolder, false);
             }
             await RecordFileDiagnostic(correlationId, gaugeId, destPath, success: valid, recognizedValue: recognizedValue, correctedValue: value, confidence: confidence);
