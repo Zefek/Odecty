@@ -848,6 +848,55 @@
       ]
     },
     {
+      "id": 19,
+      "type": "stat",
+      "title": "Verze FW",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "grafana-postgresql-heater-diag"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 29
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT fw_version FROM heater_diagnostics WHERE fw_version IS NOT NULL ORDER BY timestamp DESC LIMIT 1"
+        }
+      ],
+      "description": "Poslední hlášená verze firmwaru."
+    },
+    {
       "id": 16,
       "type": "row",
       "title": "Poruchy snímačů teplot",

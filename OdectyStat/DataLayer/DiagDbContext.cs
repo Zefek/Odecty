@@ -41,6 +41,7 @@ public class DiagDbContext : DbContext
             entity.Property(e => e.ResetReason).HasColumnName("reset_reason");
             entity.Property(e => e.LoopMaxMs).HasColumnName("loop_max_ms");
             entity.Property(e => e.Rssi).HasColumnName("rssi");
+            entity.Property(e => e.FwVersion).HasColumnName("fw_version");
 
             entity.HasIndex(e => e.Timestamp, "ix_heater_diagnostics_timestamp");
         });

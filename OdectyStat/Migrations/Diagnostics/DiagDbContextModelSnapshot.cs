@@ -525,6 +525,10 @@ namespace OdectyStat1.Migrations.Diagnostics
                         .HasColumnType("integer")
                         .HasColumnName("free_ram");
 
+                    b.Property<int?>("FwVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("fw_version");
+
                     b.Property<int>("LoopMaxMs")
                         .HasColumnType("integer")
                         .HasColumnName("loop_max_ms");

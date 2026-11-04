@@ -12,4 +12,5 @@ public class HeaterDiagnostic
     public byte ResetReason { get; set; }
     public int LoopMaxMs { get; set; }
     public sbyte? Rssi { get; set; }
+    public int? FwVersion { get; set; }
 }
