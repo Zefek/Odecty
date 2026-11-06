@@ -602,7 +602,7 @@ public class ReliabilityReportBuilder
     {
         var definitions = new List<DeviceDefinition>
         {
-            new("heater", "heater_diagnostics", "true", UptimeMinutes, [WifiReconnects, MqttReconnects, SensorErrors], [LoopMaxMs], [], false),
+            new("heater", "heater_diagnostics", "true", UptimeMinutes, [WifiReconnects, MqttReconnects, SensorErrors], [LoopMaxMs], [], true),
             new("lssensor", "ls_sensor_diagnostics", "true", UptimeMinutes, [WifiReconnects, MqttFailCount, OtaFailCount, "sampler_overruns"], [LoopMaxMs, "sampler_max_us"], ["sampler_stack_words"], true),
             new("garage", "garage_diagnostics", "true", UptimeMinutes, [WifiReconnects, MqttReconnects, SensorErrors, OtaFailCount, "door_cycles"], [LoopMaxMs], [], true),
             new("fve", "fve_diagnostics", "true", UptimeMinutes, [WifiReconnects, MqttFailCount, OtaFailCount, "bel_frame_errors", "load_dropouts"], [LoopMaxMs, "fan_mismatch_slots"], [MinFreeHeapKb], true),

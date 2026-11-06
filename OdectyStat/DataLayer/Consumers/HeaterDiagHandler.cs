@@ -9,6 +9,7 @@ namespace OdectyStat1.DataLayer.Consumers;
 public class HeaterDiagHandler : IBinaryMessageHandler
 {
     private const int ExpectedSize = 16;
+    private const int VersionedSize = 18;
 
     public string QueueName => QueuesToConsume.HeaterDiag;
 
@@ -36,8 +37,8 @@ public class HeaterDiagHandler : IBinaryMessageHandler
         db.HeaterDiagnostics.Add(data);
         await db.SaveChangesAsync(ct);
 
-        logger.LogDebug("Saved heater diagnostic: uptime={Uptime}min, freeRam={FreeRam}B, loopMax={LoopMax}ms, rssi={Rssi}dBm",
-            data.UptimeMinutes, data.FreeRam, data.LoopMaxMs, data.Rssi);
+        logger.LogDebug("Saved heater diagnostic: uptime={Uptime}min, freeRam={FreeRam}B, loopMax={LoopMax}ms, rssi={Rssi}dBm, fw={FwVersion}",
+            data.UptimeMinutes, data.FreeRam, data.LoopMaxMs, data.Rssi, data.FwVersion);
     }
 
     private static HeaterDiagnostic ParseDiagData(ReadOnlySpan<byte> span)
@@ -51,6 +52,7 @@ public class HeaterDiagHandler : IBinaryMessageHandler
         // offset 12: uint8  resetReason (MCUSR)
         // offset 13: uint16 loopMaxMs
         // offset 15: int8   rssi (dBm, signed)
+        // offset 16: uint16 fwVersion (18-byte payload only)
         return new HeaterDiagnostic
         {
             Timestamp = DateTime.UtcNow,
@@ -61,7 +63,8 @@ public class HeaterDiagHandler : IBinaryMessageHandler
             SensorErrors = BinaryPrimitives.ReadUInt16LittleEndian(span[10..]),
             ResetReason = span[12],
             LoopMaxMs = BinaryPrimitives.ReadUInt16LittleEndian(span[13..]),
-            Rssi = (sbyte)span[15]
+            Rssi = (sbyte)span[15],
+            FwVersion = span.Length >= VersionedSize ? BinaryPrimitives.ReadUInt16LittleEndian(span[16..]) : null
         };
     }
 }
