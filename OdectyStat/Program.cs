@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using GitHttpBackend.Configuration;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -25,6 +26,7 @@ if (args.Length > 0 && args[0] == "reliability")
 }
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddConfigRepository(args);
 
 builder.Host.UseWindowsService();
 
