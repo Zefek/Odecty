@@ -31,4 +31,5 @@ jobs:
       artifact_run_id: ${{ inputs.artifact_run_id }}
       artifact_name:   ${{ inputs.artifact_name }}
       device_name:     Odecty
+      config_from_repo: true
     secrets: inherit
